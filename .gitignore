@@ -1,0 +1,58 @@
+# Entorno virtual y dependencias
+.venv/
+venv/
+ENV/
+env/
+
+# Datos y ejecuciones (Regla 2 AGENTS.md)
+data/raw/
+data/processed/
+runs/
+
+# Artefactos y checkpoints
+*.npz
+*.pt
+!models/frozen/*.pt
+*.pth
+*.ckpt
+
+# Python caches y compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribución y empaquetado
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter y checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Herramientas de testing y linting
+.pytest_cache/
+.ruff_cache/
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
