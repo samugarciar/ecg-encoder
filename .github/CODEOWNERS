@@ -1,4 +1,5 @@
-src/ecg/data/ @DATOS
+* @samugarciar @jossanchezal
+src/ecg/data/ @samugarciar @jossanchezal
 src/ecg/models/ @MODELO
 src/ecg/train.py @MODELO
 src/ecg/score.py @MODELO
