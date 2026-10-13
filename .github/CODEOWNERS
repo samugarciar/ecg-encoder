@@ -8,4 +8,4 @@ src/ecg/evaluate/ @EVALUACION
 src/ecg/config.py @INTEGRADOR
 requirements.txt @INTEGRADOR
 AGENTS.md @INTEGRADOR
-docs/contracts.md @INTEGRADOR @DATOS @MODELO @EVALUACION
+docs/contracts.md @INTEGRADOR @MODELO @EVALUACION
