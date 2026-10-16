@@ -93,3 +93,47 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 - **Por qué**: Permite comparar directamente con la literatura que usa la partición DS1/DS2. Mover o excluir uno de los dos registros rompería esa comparabilidad.
 - **Limitación**: Queda una posible fuga de morfología paciente-específica entre train y test a través de este par. Se documenta como limitación del estudio, y se sugiere a Evaluación reportar las métricas de DS2 con y sin el registro 202.
 - **Alternativa descartada**: Pasar 201 a test o 202 a train (o excluir uno de los dos). Elimina la fuga, pero los resultados dejan de ser comparables con los trabajos que usan la partición estándar.
+
+---
+
+### D-014: Solo los 15 símbolos de `AAMI_MAP` son latidos
+- **Decisión** (16 oct 2026): Entran a C1 únicamente las anotaciones con uno de los 15 símbolos de `config.AAMI_MAP` (`N L R e j A a J S V E F / f Q`). Quedan fuera las 3 153 anotaciones que no son latidos: `+` (1 291, cambios de ritmo), `~` (616, calidad de señal), `!` (472, ondas de aleteo ventricular, todas en el 207), `"` (437, comentarios), `x` (193, ondas P no conducidas), `|` (132, artefactos), `[` y `]` (6 y 6, inicio y fin de fibrilación ventricular).
+- **Por qué**: Es la práctica estándar con AAMI EC57 y permite comparar los conteos con la literatura. Ninguna de las anotaciones excluidas es un complejo QRS clasificable.
+- **Alternativa descartada**: Contar las ondas `!` del 207 como latidos ventriculares. Son ondas de aleteo, no QRS individuales, y no tienen clase AAMI.
+
+---
+
+### D-015: `config.py` es la única fuente de parámetros de datos y splits
+- **Decisión** (16 oct 2026): `src/ecg/config.py` es la única fuente de los parámetros de señal (fs, conversor A/D, derivación), de ventana, de filtro y de los splits. Se elimina `configs/data.yaml`, que repetía esos valores y no lo leía ningún módulo. `configs/` queda para los hiperparámetros de entrenamiento (regla 8).
+- **Por qué**: Dos copias terminan desincronizándose. La regla 5 reserva los splits para `config.py`, que además los valida al importar. La ventana y el filtro no son hiperparámetros que se ajusten: forman parte del contrato C1 y quedan registrados en `meta.json`.
+- **Alternativas descartadas**: Que `config.py` lea los parámetros desde el YAML (cambia un módulo compartido sin necesidad), o quitar solo los splits del YAML (deja fs, ventana y filtro duplicados).
+
+---
+
+### D-016: `mlii_noisy` se marca si cualquier muestra de la ventana cae en un tramo ruidoso
+- **Decisión** (16 oct 2026): `mlii_noisy = True` si alguna muestra de la ventana `[r-90, r+166)` cae en un tramo con MLII marcada como ruidosa. Los tramos se leen de las marcas `~` como un interruptor: cada marca fija el estado hasta la siguiente. El subtipo es un campo de bits (bit 0 = señal 0, bit 1 = señal 1); MLII es la señal 0 en todos los registros salvo el 114, donde es la 1. El subtipo `-1` (8 casos) tiene todos los bits encendidos y cuenta como ruidoso.
+- **Por qué**: El autoencoder recibe la ventana completa, no solo el pico R. Un latido cuya ventana toca un tramo ruidoso tiene la entrada contaminada, así que este es el criterio más conservador para las métricas `clean_only`.
+- **Alternativa descartada**: Mirar solo la muestra del R. Es más simple, pero deja como limpios los latidos cuyo inicio o final cae en un tramo ruidoso. Antes de descartar bordes, el criterio de ventana marca 908 / 46 / 1 076 latidos (train/val/test) y el del R, 852 / 41 / 1 002.
+
+---
+
+### D-017: El RR se calcula entre latidos AAMI consecutivos, antes de descartar bordes
+- **Decisión** (16 oct 2026): `rr_prev` y `rr_next` se calculan registro por registro, entre latidos consecutivos con símbolo en `AAMI_MAP`, **antes** de descartar los 39 latidos cuya ventana no cabe en el registro. Solo el primer latido de cada registro tiene `rr_prev = NaN` y solo el último `rr_next = NaN`; si ese latido es de borde, se descarta junto con su `NaN`.
+- **Por qué**: El RR es una propiedad fisiológica: los latidos de borde existieron aunque su ventana no quepa. Calcularlo después cambiaría el RR de 39 latidos, los vecinos de los bordes. En esta base todas las anotaciones de latido son los 15 símbolos AAMI, así que "solo latidos AAMI" y "todos los QRS" coinciden.
+- **Limitación**: Los RR que cruzan episodios sin latidos anotados (por ejemplo, el aleteo ventricular del 207, marcado con `!`) salen largos.
+- **Alternativa descartada**: Calcular el RR después de quitar los bordes.
+
+---
+
+### D-018: "Normal" es el símbolo `N` en cualquier ritmo
+- **Decisión** (16 oct 2026): `label = 0` sigue siendo el símbolo `N`, sin mirar el ritmo anotado (D-005). C1 no guarda el ritmo.
+- **Por qué**: Mantiene el contrato y la comparabilidad con la literatura, que define las clases por símbolo.
+- **Limitación**: 4 336 de los 29 607 latidos `N` de train (14,6 %) ocurren en fibrilación auricular (201 y 203), flutter auricular (203) o preexcitación (230). El autoencoder aprende también esas formas como normales, lo que puede bajar su sensibilidad a latidos supraventriculares. Se reporta en el informe.
+- **Alternativas descartadas por ahora**: Agregar una columna `rhythm` a C1 para que Modelo pruebe entrenar solo con `N` sinusales (cambio de contrato aditivo; se puede retomar con Modelo), o redefinir "normal" como `N` en ritmo sinusal (rompe D-005 y la comparación con la literatura).
+
+---
+
+### D-019: El pipeline de datos se documenta en un notebook y se implementa en `src/ecg/data/`
+- **Decisión** (16 oct 2026): `notebooks/samugarciar/datos_mitbih_c1.ipynb` queda como el documento por etapas del pipeline (explicaciones, figuras y comprobaciones). El código definitivo pasa a `src/ecg/data/` (`records.py`, `filtering.py`, `segmentation.py`, `build.py`) con tests, y C1 se genera con `python -m ecg.data.build`. Cuando esos módulos existan, el notebook los importa en vez de definir sus propias funciones. Mientras tanto, el notebook genera C1.
+- **Por qué**: El notebook sirve para explicar y para mirar los datos; los módulos se prueban en CI (regla 10) y dan al equipo un comando reproducible.
+- **Alternativa descartada**: Dejar el notebook como generador oficial de C1, sin tests en CI ni un comando para el resto del equipo.
