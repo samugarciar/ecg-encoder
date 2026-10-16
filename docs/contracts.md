@@ -8,7 +8,7 @@ Este documento define formalmente las interfaces inmutables de datos entre fases
 - **Archivos**: `data/processed/beats.npz` y `data/processed/meta.json`
 
 ### `beats.npz`
-Diccionario de arrays de NumPy alineados a lo largo del eje `n` (número total de latidos extraídos):
+Diccionario de arrays de NumPy alineados a lo largo del eje `n` (número total de latidos extraídos). Solo entran las anotaciones con símbolo en `config.AAMI_MAP` (D-014), y se descartan los latidos cuya ventana `[r-90, r+166)` no cabe en el registro:
 - `X`: `float32`, forma `(n, 256)`. Señal de derivación MLII filtrada con pasabanda 0.5–40 Hz, expresada en milivoltios (mV), **SIN normalizar**.
 - `symbol`: `<U1`, forma `(n,)`. Símbolo original del latido según anotación MIT-BIH (ej. `'N'`, `'L'`, `'R'`, `'V'`, `'A'`, etc.).
 - `aami`: `<U1`, forma `(n,)`. Clase AAMI correspondiente en `{'N', 'S', 'V', 'F', 'Q'}`.
@@ -16,9 +16,9 @@ Diccionario de arrays de NumPy alineados a lo largo del eje `n` (número total d
 - `record`: `int16`, forma `(n,)`. Identificador del registro original (ej. `100`, `101`, `234`).
 - `split`: `<U5`, forma `(n,)`. Subconjunto asignado al registro: `'train'`, `'val'` o `'test'`.
 - `r_sample`: `int32`, forma `(n,)`. Índice de la muestra del pico R en el registro continuo de 360 Hz.
-- `rr_prev`: `float32`, forma `(n,)`. Intervalo R-R previo en segundos (`NaN` para el primer latido del registro).
-- `rr_next`: `float32`, forma `(n,)`. Intervalo R-R siguiente en segundos (`NaN` para el último latido del registro).
-- `mlii_noisy`: `bool`, forma `(n,)`. `True` si el latido se encuentra dentro de un segmento marcado como ruidoso en MLII.
+- `rr_prev`: `float32`, forma `(n,)`. Intervalo R-R previo en segundos, entre latidos AAMI consecutivos del registro y calculado antes de descartar los latidos de borde (D-017). `NaN` para el primer latido del registro.
+- `rr_next`: `float32`, forma `(n,)`. Intervalo R-R siguiente en segundos, con el mismo criterio que `rr_prev`. `NaN` para el último latido del registro.
+- `mlii_noisy`: `bool`, forma `(n,)`. `True` si alguna muestra de la ventana del latido cae dentro de un segmento marcado como ruidoso en MLII por las anotaciones `~` (el subtipo `-1` cuenta como ruidoso; D-016).
 
 ### `meta.json`
 Metadatos del proceso de extracción:
