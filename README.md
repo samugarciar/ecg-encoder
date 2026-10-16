@@ -101,6 +101,30 @@ ruff check .
 
 ---
 
+## Contexto de Datos
+
+Para comprender y ejecutar el notebook del pipeline ([`notebooks/datos_mitbih_c1.ipynb`](notebooks/datos_mitbih_c1.ipynb)), todas las constantes físicas, criterios médicos y decisiones de diseño (`docs/decisions.md`) se centralizan en `src/ecg/config.py` (D-015) y se validan en `src/ecg/io.py`:
+
+* **Señal física y conversión a mV (`FS`, `ADC_ZERO`, `ADC_GAIN`, `LEAD`)**:
+  * Los 48 registros de **MIT-BIH** (D-001) duran 30 min a **`FS = 360` Hz** ($650,000$ muestras por archivo, $\Delta t \approx 2.78\text{ ms}$).
+  * Los `.csv` crudos almacenan enteros del conversor A/D de 11 bits donde el cero eléctrico es **`ADC_ZERO = 1024`** y la ganancia es **`ADC_GAIN = 200`** unidades/mV: $\text{mV} = (x - 1024) / 200$.
+  * Se extrae únicamente la derivación **`LEAD = "MLII"`** (D-004), buscándola por nombre de columna y no por posición (en el registro `114` está en el canal 1 en lugar del 0).
+* **Filtrado y recorte de ventana (`BANDPASS`, `FILTER_ORDER`, `WIN_PRE`, `WIN_POST`, `WIN_LEN`)**:
+  * **Filtro pasabanda Butterworth** (`BANDPASS = (0.5, 40.0)` Hz, `FILTER_ORDER = 3`, D-007): se aplica con fase cero (`sosfiltfilt`) sobre el registro continuo completo antes de segmentar, eliminando deriva de línea base ($<0.5\text{ Hz}$) y ruido muscular/red eléctrica ($>40\text{ Hz}$) sin desfasar el QRS ni generar transitorios en los cortes.
+  * **Ventana asimétrica `[r - 90, r + 166)`** (`WIN_PRE = 90`, `WIN_POST = 166`, `WIN_LEN = 256`, D-006): cubre $250\text{ ms}$ antes y $461\text{ ms}$ después de la anotación del pico R ($\approx 711\text{ ms}$, desde la onda P hasta el fin de la onda T) en una potencia de 2 óptima para `Conv1D`. Los 39 latidos cuya ventana se sale de los extremos del registro se descartan por borde.
+  * **Unidades en C1** (D-008): `beats.npz` guarda la ventana `X` en mV filtrados **sin normalizar**; el *z-score* por latido se aplica en la etapa de Modelo.
+* **Partición inter-paciente (`EXCLUDED`, `DS1_TRAIN`, `DS1_VAL`, `DS2_TEST`)**:
+  * Según el estándar médico **AAMI EC57**, se excluyen los 4 registros con marcapasos: **`EXCLUDED = [102, 104, 107, 217]`** (D-002).
+  * Los **44 registros válidos** se dividen **por paciente** siguiendo a *de Chazal et al. (2004)* (D-003, D-013) para evitar fuga de morfología cardíaca entre splits: **`DS1_TRAIN`** (18 registros), **`DS1_VAL`** (4 registros: `116, 119, 209, 223`) y **`DS2_TEST`** (22 registros). `load_beats()` bloquea el acceso a `test` durante el desarrollo salvo que se indique `allow_test=True`.
+* **Símbolos, clases AAMI y definición de normalidad (`AAMI_MAP`, `NORMAL_SYMBOLS`, `AAMI_NORMAL`)**:
+  * Solo los **15 símbolos de `AAMI_MAP`** son complejos QRS clasificables y entran al Contrato C1, agrupados en las 5 superclases estándar (`N`, `S`, `V`, `F`, `Q`); quedan fuera $3,153$ anotaciones de eventos no-latido como cambios de ritmo `+`, calidad de señal `~`, ondas de aleteo ventricular `!` o artefactos `|` (D-014).
+  * **Normalidad estricta** (D-005, D-018): en este proyecto `label = 0` se asigna **solo cuando `symbol == "N"`** (`NORMAL_SYMBOLS = {"N"}`, sin importar el ritmo activo en `+`). Otros símbolos de la clase AAMI N con morfología alterada (bloqueos de rama `L`, `R` y escapes `e`, `j`) llevan `label = 1` (anómalos), conservando `AAMI_NORMAL = {"N", "L", "R", "e", "j"}` para calcular la métrica comparativa `aami_view` en evaluación.
+* **Intervalos RR y ruido en MLII (`rr_prev`, `rr_next`, `mlii_noisy`)**:
+  * **`rr_prev` y `rr_next`** (D-017): tiempo en segundos hacia el latido AAMI anterior y siguiente dentro del mismo registro, calculado **antes** de descartar los 39 latidos de borde para preservar el intervalo fisiológico real de sus vecinos.
+  * **`mlii_noisy`** (D-016): las marcas `~` actúan como un interruptor cuyo subtipo (`sub`) es una máscara de bits por canal (bit 0 = canal 0, bit 1 = canal 1, `-1` = ambos). Un latido recibe `mlii_noisy = True` si **cualquier muestra de su ventana `[r - 90, r + 166)`** toca un tramo ruidoso en el canal de `MLII`.
+
+---
+
 ## Tabla de Roles y Responsabilidades
 
 | Rol | Marcador CODEOWNERS | Rutas Asignadas | Responsabilidad Principal |
