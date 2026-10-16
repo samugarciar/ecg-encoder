@@ -9,6 +9,6 @@ for i in data.files:
     print(f'Valores: {arrayActual}')
     print(f'Forma: {arrayActual.shape}')
     print(f'Tipo de dato: {arrayActual.dtype}')
-    
+
 
 data.close()
