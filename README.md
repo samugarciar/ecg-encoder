@@ -19,7 +19,6 @@ ecg-autoencoder/
 │   └── workflows/
 │       └── ci.yml                     # Integración continua (Python 3.11, ruff, pytest)
 ├── configs/
-│   ├── data.yaml                      # Parámetros de señal, ventana y filtros
 │   └── train/                         # Configuraciones de hiperparámetros de entrenamiento
 ├── data/
 │   ├── raw/
@@ -29,7 +28,7 @@ ecg-autoencoder/
 │   └── README.md                      # Documentación del origen y uso de datos
 ├── docs/
 │   ├── contracts.md                   # Contratos de interfaces de datos (C1, C2, C3)
-│   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-012)
+│   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
 ├── notebooks/                         # Notebooks exploratorios organizados por autor
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final

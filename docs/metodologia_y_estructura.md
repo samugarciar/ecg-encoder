@@ -75,8 +75,8 @@ flowchart LR
 * `record`: `int16`, número de paciente.
 * `split`: `<U5`, `'train'`, `'val'` o `'test'`.
 * `r_sample`: `int32`, índice temporal del pico R en la grabación continua.
-* `rr_prev`, `rr_next`: `float32`, intervalos entre picos R en segundos (`NaN` en extremos).
-* `mlii_noisy`: `bool`, indicador de artefactos severos de ruido en la derivación MLII.
+* `rr_prev`, `rr_next`: `float32`, intervalos entre latidos AAMI consecutivos en segundos, calculados antes de descartar bordes (`NaN` en el primer y el último latido del registro; D-017).
+* `mlii_noisy`: `bool`, `True` si alguna muestra de la ventana cae en un tramo marcado como ruidoso en MLII (D-016).
 * `meta.json`: Metadatos de procedencia (`fs=360`, versión de datos, conteos `split x aami`, commit de git).
 
 ### Contrato C2: Puntuaciones del Modelo (`runs/<run_id>/scores_<split>.npz`)
@@ -109,7 +109,6 @@ ecg-autoencoder/
 │   └── workflows/
 │       └── ci.yml                     # Pipeline CI (Python 3.11, CPU Torch, ruff, pytest)
 ├── configs/
-│   ├── data.yaml                      # Configuración de muestreo, ventana, filtros y splits
 │   └── train/                         # Hiperparámetros de entrenamiento (.gitkeep)
 ├── data/
 │   ├── raw/
@@ -119,7 +118,7 @@ ecg-autoencoder/
 │   └── README.md                      # Documentación del origen y verificación de datos
 ├── docs/
 │   ├── contracts.md                   # Definición técnica formal de contratos C1, C2 y C3
-│   ├── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-012)
+│   ├── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
 │   └── metodologia_y_estructura.md   # Este resumen metodológico
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
