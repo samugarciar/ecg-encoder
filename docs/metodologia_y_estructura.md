@@ -47,10 +47,10 @@ Siguiendo el estándar canónico de **de Chazal et al. (2004)** y la norma **AAM
     * Se filtran exclusivamente los latidos con símbolo `'N'`.
   * **Validación interna (`DS1_VAL`, 4 registros)**: `[116, 119, 209, 223]`
     * Contiene latidos normales y anómalos. Se utiliza para elegir el umbral (percentil 95 en normales) y monitorear el entrenamiento.
-    * *Nota*: Los registros 201 y 202 provienen del mismo paciente; ambos se mantuvieron en el mismo grupo para evitar fuga.
 * **Conjunto de Prueba Final DS2 (`DS2_TEST`, 22 registros)**:
   * `[100, 103, 105, 111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234]`
   * Reservado para la evaluación ciega final.
+* *Nota*: Los registros 201 (train) y 202 (test) provienen del mismo paciente. Se mantiene la partición de de Chazal tal cual para comparar con la literatura; es una limitación documentada en D-013.
 
 ---
 

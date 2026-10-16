@@ -19,7 +19,7 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 ---
 
 ### D-003: Split inter-paciente DS1/DS2 (de Chazal et al., 2004)
-- **Decisión**: Dividir los 44 registros válidos siguiendo la partición inter-paciente canónica de Chazal (DS1 y DS2). Para validación interna de DS1 se asignan los registros `[116, 119, 209, 223]`, dejando 18 registros en entrenamiento y 22 en test (DS2). Nota: 201 y 202 corresponden al mismo sujeto, ambos ubicados en el mismo split para evitar fuga.
+- **Decisión**: Dividir los 44 registros válidos siguiendo la partición inter-paciente canónica de Chazal (DS1 y DS2). Para validación interna de DS1 se asignan los registros `[116, 119, 209, 223]`, dejando 18 registros en entrenamiento y 22 en test (DS2). Nota: 201 (train) y 202 (test) corresponden al mismo paciente; se mantiene la partición original para comparar con la literatura (ver D-013).
 - **Por qué**: Evitar el error metodológico más común en ECG: dividir por latidos (intra-paciente). La morfología cardíaca es paciente-específica; evaluar en pacientes nunca vistos es la única prueba real de generalización.
 - **Alternativa descartada**: Validación cruzada aleatoria por latidos (infla métricas de forma artificial por fuga de información de morfología del mismo sujeto).
 
@@ -85,3 +85,11 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 - **Decisión**: El conjunto `DS2_TEST` permanece intocado durante todo el proceso de ingeniería, ajuste de hiperparámetros y selección de umbrales. Solo se ejecuta una vez al final por la persona designada como guardiana del test, con el modelo y pesos congelados (`models/frozen/`).
 - **Por qué**: Blindar el experimento contra sobreajuste al conjunto de prueba y garantizar la validez científica del reporte final.
 - **Alternativa descartada**: Evaluar repetidamente sobre test para tomar decisiones de diseño o detener el entrenamiento.
+
+---
+
+### D-013: Mantener la partición de de Chazal con 201 en train y 202 en test
+- **Decisión** (13 oct 2026): Se mantiene la partición de de Chazal et al. (2004) tal cual: el registro 201 queda en `DS1_TRAIN` y el 202 en `DS2_TEST`, aunque ambos provienen del mismo paciente.
+- **Por qué**: Permite comparar directamente con la literatura que usa la partición DS1/DS2. Mover o excluir uno de los dos registros rompería esa comparabilidad.
+- **Limitación**: Queda una posible fuga de morfología paciente-específica entre train y test a través de este par. Se documenta como limitación del estudio, y se sugiere a Evaluación reportar las métricas de DS2 con y sin el registro 202.
+- **Alternativa descartada**: Pasar 201 a test o 202 a train (o excluir uno de los dos). Elimina la fuga, pero los resultados dejan de ser comparables con los trabajos que usan la partición estándar.
