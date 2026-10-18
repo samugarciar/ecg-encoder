@@ -26,13 +26,13 @@ Para garantizar la reproducibilidad y la validez científica del proyecto frente
 3. **Cero rutas absolutas**: Toda ruta se construye de forma canónica y relativa a través de `src/ecg/paths.py` (con soporte para la variable de entorno `ECG_RAW_DIR`).
 4. **Split "test" (DS2) estrictamente prohibido durante desarrollo**: No se usa para ajustar hiperparámetros ni para calcular umbrales. Su acceso está bloqueado por software (`PermissionError`). Solo se evalúa una única vez al final del proyecto por la persona designada como **Guardián del Test** con la bandera `--final`.
 5. **Partición por paciente (inter-paciente)**: Definida exclusivamente en `src/ecg/config.py`. Queda terminantemente prohibido hacer splits aleatorios por latido individual (lo cual generaría fuga masiva de morfología paciente-específica).
-6. **Inmutabilidad de contratos**: Los esquemas de datos definidos en `docs/contracts.md` son inmutables. Modificarlos exige un PR explícito con la etiqueta `contract-change`.
+6. **Inmutabilidad de contratos**: Los esquemas de datos definidos en `docs/contracts.md` no cambian sin actualizar ese archivo en el mismo commit y avisar al equipo.
 7. **Aislamiento de tareas**: Cada desarrollador y agente trabaja exclusivamente en los módulos correspondientes a su tarea asignada.
 8. **Hiperparámetros fuera del código**: Todos los parámetros de entrenamiento residen en archivos YAML bajo `configs/`.
 9. **Aleatoriedad determinista**: Toda generación o split aleatorio utiliza la función centralizada `seed_everything()` de `src/ecg/utils/seed.py`.
-10. **Comprobación obligatoria**: Todo PR debe pasar localmente y en CI `pytest -q` y `ruff check .` en verde.
+10. **Comprobación obligatoria**: Antes de subir a `main`, `pytest -q` y `ruff check .` deben pasar en local; el CI los vuelve a correr en cada push.
 11. **Honestidad métrica**: Si una forma, conteo o métrica no coincide con lo esperado, jamás se maquilla o fuerza el código: se detiene el trabajo y se documenta la discrepancia.
-12. **Flujo de commits**: Sin push directo a `main`. Commits locales atómicos, escritos en español e imperativo (ej. *"Implementar normalización z-score por latido"*).
+12. **Flujo de commits**: Se sube directo a `main`, sin ramas ni PR obligatorios. Commits atómicos, escritos en español e imperativo (ej. *"Implementar normalización z-score por latido"*). Los agentes no hacen push: dejan commits locales que una persona revisa y sube.
 
 ---
 
@@ -105,7 +105,6 @@ ecg-autoencoder/
 ├── .gitignore                         # Exclusión de datos crudos/procesados, runs y modelos
 ├── .github/
 │   ├── CODEOWNERS                     # Asignación de módulos a responsables de área
-│   ├── pull_request_template.md       # Plantilla de PR con checklist estricto
 │   └── workflows/
 │       └── ci.yml                     # Pipeline CI (Python 3.11, CPU Torch, ruff, pytest)
 ├── configs/
@@ -167,18 +166,20 @@ ecg-autoencoder/
 
 ## 7. Flujo de Trabajo Práctico para los Integrantes
 
-1. **Crear rama de trabajo**:
+1. **Traer lo último de `main`** antes de empezar:
    ```bash
-   git checkout -b feat/nombre-tarea
+   git pull origin main
    ```
 2. **Desarrollar y probar con mocks**:
    * Los desarrolladores de modelos o evaluación no necesitan esperar a que el pipeline de datos esté listo; pueden utilizar los mocks generados con `python scripts/make_mock_beats.py` que cumplen con el contrato C1.
-3. **Verificar antes de abrir PR**:
+3. **Verificar antes de subir**:
    ```bash
-   pytest -q        # Debe reportar 12 pruebas pasadas
+   pytest -q        # Todas las pruebas en verde
    ruff check .     # Debe reportar 'All checks passed!'
    ```
-4. **Abrir Pull Request**:
-   * Llenar la plantilla obligatoria (`.github/pull_request_template.md`).
-   * GitHub Actions ejecutará automáticamente las pruebas y los linters.
-   * El responsable del área (según `CODEOWNERS`) revisará y aprobará el cambio.
+4. **Subir directo a `main`**:
+   ```bash
+   git push origin main
+   ```
+   * GitHub Actions vuelve a correr las pruebas y el linter en cada push.
+   * Si el cambio toca un contrato (`docs/contracts.md`) o una decisión (`docs/decisions.md`), avisar al equipo. `CODEOWNERS` indica a quién le afecta cada carpeta.

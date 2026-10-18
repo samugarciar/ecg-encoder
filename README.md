@@ -15,7 +15,6 @@ ecg-autoencoder/
 ├── .gitignore                         # Exclusiones de git (datos, ejecuciones, modelos)
 ├── .github/
 │   ├── CODEOWNERS                     # Asignación de módulos a responsables de área
-│   ├── pull_request_template.md       # Plantilla de PR con checklist estricto
 │   └── workflows/
 │       └── ci.yml                     # Integración continua (Python 3.11, ruff, pytest)
 ├── configs/

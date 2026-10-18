@@ -1,6 +1,6 @@
 # Contratos de Datos y Resultados
 
-Este documento define formalmente las interfaces inmutables de datos entre fases del proyecto. Cualquier modificación a estos contratos requiere abrir un Pull Request con la etiqueta `contract-change` y actualizar este archivo.
+Este documento define formalmente las interfaces inmutables de datos entre fases del proyecto. Cualquier modificación a estos contratos se sube en el mismo commit que actualiza este archivo, y se avisa al equipo.
 
 ---
 
