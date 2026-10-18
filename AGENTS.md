@@ -18,5 +18,5 @@ Autoencoder Conv1D (PyTorch) entrenado solo con latidos normales (símbolo N). E
 ## Convenciones
 - Python 3.11. Nombres de código en inglés; comentarios y documentación en español.
 - Cada entrenamiento crea runs/<run_id>/ con run_id = AAAAMMDD-HHMM_<autor>_<nombre>.
-- Notebooks solo en notebooks/<persona>/, nunca importados desde src/.
+- Notebooks de exploración en notebooks/<persona>/. Los que documentan un pipeline compartido (como notebooks/datos_mitbih_c1.ipynb) van en notebooks/. Ningún notebook se importa desde src/.
 - Dependencias nuevas: no las agregues; pídelas.

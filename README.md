@@ -29,7 +29,7 @@ ecg-autoencoder/
 ├── docs/
 │   ├── contracts.md                   # Contratos de interfaces de datos (C1, C2, C3)
 │   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
-├── notebooks/                         # Notebooks exploratorios organizados por autor
+├── notebooks/                         # datos_mitbih_c1.ipynb (pipeline de datos por etapas) y exploraciones por autor
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
 ├── results/                           # Métricas JSON (Contrato C3) y leaderboard.md

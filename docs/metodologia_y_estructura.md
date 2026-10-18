@@ -122,7 +122,7 @@ ecg-autoencoder/
 │   └── metodologia_y_estructura.md   # Este resumen metodológico
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
-├── notebooks/                         # Notebooks de análisis por persona (ignorado en git)
+├── notebooks/                         # datos_mitbih_c1.ipynb (pipeline de datos) y exploraciones por persona
 ├── results/
 │   └── leaderboard.md                 # Tabla comparativa de experimentos
 ├── runs/

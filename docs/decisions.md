@@ -134,6 +134,6 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 ---
 
 ### D-019: El pipeline de datos se documenta en un notebook y se implementa en `src/ecg/data/`
-- **Decisión** (16 oct 2026): `notebooks/samugarciar/datos_mitbih_c1.ipynb` queda como el documento por etapas del pipeline (explicaciones, figuras y comprobaciones). El código definitivo pasa a `src/ecg/data/` (`records.py`, `filtering.py`, `segmentation.py`, `build.py`) con tests, y C1 se genera con `python -m ecg.data.build`. Cuando esos módulos existan, el notebook los importa en vez de definir sus propias funciones. Mientras tanto, el notebook genera C1.
+- **Decisión** (16 oct 2026): `notebooks/datos_mitbih_c1.ipynb` queda como el documento por etapas del pipeline (explicaciones, figuras y comprobaciones). El código definitivo pasa a `src/ecg/data/` (`records.py`, `filtering.py`, `segmentation.py`, `build.py`) con tests, y C1 se genera con `python -m ecg.data.build`. Cuando esos módulos existan, el notebook los importa en vez de definir sus propias funciones. Mientras tanto, el notebook genera C1.
 - **Por qué**: El notebook sirve para explicar y para mirar los datos; los módulos se prueban en CI (regla 10) y dan al equipo un comando reproducible.
 - **Alternativa descartada**: Dejar el notebook como generador oficial de C1, sin tests en CI ni un comando para el resto del equipo.
