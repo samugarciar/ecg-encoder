@@ -38,6 +38,7 @@ ecg-autoencoder/
 │   ├── verify_raw_data.py             # Valida la integridad de data/raw/mitbih_database
 │   ├── make_mock_beats.py             # Genera latidos sintéticos mock (C1)
 │   ├── make_mock_scores.py            # Genera puntuaciones mock de error (C2)
+│   ├── inspect_beats.py               # Resume las columnas de beats.npz (train y val)
 │   └── aggregate_results.py           # Agrega resultados JSON a results/leaderboard.md
 ├── src/
 │   └── ecg/

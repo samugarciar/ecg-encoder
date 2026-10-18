@@ -132,6 +132,7 @@ ecg-autoencoder/
 │   ├── verify_raw_data.py             # Verificador de integridad de datos crudos
 │   ├── make_mock_beats.py             # Generador de latidos sintéticos C1 (P/QRS/T gaussianos)
 │   ├── make_mock_scores.py            # Generador de errores sintéticos C2 (distribución lognormal)
+│   ├── inspect_beats.py               # Resumen de las columnas de beats.npz (solo train y val)
 │   └── aggregate_results.py           # Compilador de JSONs en results/leaderboard.md
 ├── src/
 │   └── ecg/
