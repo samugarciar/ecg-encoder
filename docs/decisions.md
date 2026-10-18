@@ -120,7 +120,7 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 ### D-017: El RR se calcula entre latidos AAMI consecutivos, antes de descartar bordes
 - **Decisión** (16 oct 2026): `rr_prev` y `rr_next` se calculan registro por registro, entre latidos consecutivos con símbolo en `AAMI_MAP`, **antes** de descartar los 39 latidos cuya ventana no cabe en el registro. Solo el primer latido de cada registro tiene `rr_prev = NaN` y solo el último `rr_next = NaN`; si ese latido es de borde, se descarta junto con su `NaN`.
 - **Por qué**: El RR es una propiedad fisiológica: los latidos de borde existieron aunque su ventana no quepa. Calcularlo después cambiaría el RR de 39 latidos, los vecinos de los bordes. En esta base todas las anotaciones de latido son los 15 símbolos AAMI, así que "solo latidos AAMI" y "todos los QRS" coinciden.
-- **Limitación**: Los RR que cruzan episodios sin latidos anotados (por ejemplo, el aleteo ventricular del 207, marcado con `!`) salen largos.
+- **Limitación**: Los RR que cruzan episodios sin latidos anotados salen largos. En DS1 hay 22 latidos con `rr_prev` mayor de 2 s (registros 201, 207 y 208); el más largo, de 100 s, cruza el episodio de aleteo ventricular del 207 (minutos 25,7 a 27,3), marcado solo con ondas `!`.
 - **Alternativa descartada**: Calcular el RR después de quitar los bordes.
 
 ---
