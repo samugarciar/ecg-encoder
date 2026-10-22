@@ -1,0 +1,23 @@
+# Baseline del autoencoder (D-020, D-021, D-022).
+# Todos los hiperparámetros del entrenamiento viven aquí (regla 8). Para un experimento,
+# copia este archivo con otro `name` y cambia solo lo que quieras probar.
+name: baseline
+seed: 42
+device: cpu  # "cpu" es reproducible; "mps" (GPU de Apple) es más rápida pero menos determinista
+
+data:
+  exclude_noisy: true  # D-020: sin latidos con mlii_noisy en el entrenamiento ni en la detención
+  normalization: zscore  # D-008: "zscore" por latido o "none" (experimento pendiente)
+
+model:
+  input_length: 256
+  channels: [16, 32, 64, 128]  # un nivel del encoder por valor: 256 → 128 → 64 → 32 → 16
+  kernel_size: 7
+  latent_dim: 32  # D-009: tamaño del cuello de botella
+
+training:
+  batch_size: 256
+  learning_rate: 0.001
+  max_epochs: 100
+  patience: 10  # D-021: épocas seguidas sin mejorar el error de los N limpios de val
+  min_delta: 0.0  # mejora mínima para contar como mejora
