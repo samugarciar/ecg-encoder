@@ -18,7 +18,8 @@ ecg-autoencoder/
 │   └── workflows/
 │       └── ci.yml                     # Integración continua (Python 3.11, ruff, pytest)
 ├── configs/
-│   └── train/                         # Configuraciones de hiperparámetros de entrenamiento
+│   └── train/
+│       └── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
 ├── data/
 │   ├── raw/
 │   │   └── mitbih_database/           # 96 archivos crudos (48 registros .csv y .txt) [SOLO LECTURA]
@@ -28,7 +29,7 @@ ecg-autoencoder/
 ├── docs/
 │   ├── contracts.md                   # Contratos de interfaces de datos (C1, C2, C3)
 │   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
-├── notebooks/                         # datos_mitbih_c1.ipynb (pipeline de datos por etapas) y exploraciones por autor
+├── notebooks/                         # datos_mitbih_c1.ipynb y modelo_autoencoder.ipynb (por etapas) y exploraciones por autor
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
 ├── results/                           # Métricas JSON (Contrato C3) y leaderboard.md
@@ -48,12 +49,18 @@ ecg-autoencoder/
 │       ├── utils/
 │       │   └── seed.py                # Control determinista de semillas pseudo-aleatorias
 │       ├── data/                      # Módulo de pipeline y preprocesamiento
-│       ├── models/                    # Módulo de arquitecturas y entrenamiento
+│       ├── models/
+│       │   ├── autoencoder.py         # ConvAutoencoder: Conv1D de cuatro niveles, cuello de 32 (D-022)
+│       │   └── preprocessing.py       # z-score por latido (D-008) y selección de N limpios (D-020)
+│       ├── train.py                   # python -m ecg.train: entrena y guarda runs/<run_id>/
+│       ├── score.py                   # python -m ecg.score: escribe scores_<split>.npz (C2)
 │       └── evaluate/                  # Módulo de evaluación y reporte de métricas
 └── tests/
     ├── test_config.py                 # Validación de splits y constantes de config.py
     ├── test_contracts.py              # Validación de contratos C1 y C2 sobre mocks
-    └── test_io_guard.py               # Verificación de barrera de acceso al split test
+    ├── test_io_guard.py               # Verificación de barrera de acceso al split test
+    ├── test_autoencoder.py            # Formas, tamaño y preprocesamiento del autoencoder
+    └── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
 ```
 
 ---

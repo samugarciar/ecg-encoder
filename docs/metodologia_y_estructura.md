@@ -108,7 +108,8 @@ ecg-autoencoder/
 │   └── workflows/
 │       └── ci.yml                     # Pipeline CI (Python 3.11, CPU Torch, ruff, pytest)
 ├── configs/
-│   └── train/                         # Hiperparámetros de entrenamiento (.gitkeep)
+│   └── train/
+│       └── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
 ├── data/
 │   ├── raw/
 │   │   └── mitbih_database/           # 96 archivos originales (.csv y annotations.txt)
@@ -121,7 +122,7 @@ ecg-autoencoder/
 │   └── metodologia_y_estructura.md   # Este resumen metodológico
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
-├── notebooks/                         # datos_mitbih_c1.ipynb (pipeline de datos) y exploraciones por persona
+├── notebooks/                         # datos_mitbih_c1.ipynb y modelo_autoencoder.ipynb (por etapas) y exploraciones por persona
 ├── results/
 │   └── leaderboard.md                 # Tabla comparativa de experimentos
 ├── runs/
@@ -142,12 +143,18 @@ ecg-autoencoder/
 │       ├── utils/
 │       │   └── seed.py                # seed_everything(seed=42) para Python, NumPy y PyTorch
 │       ├── data/                      # (Por implementar) Ingesta, filtrado y segmentación
-│       ├── models/                    # (Por implementar) Arquitectura Conv1D y bucle de entrenamiento
+│       ├── models/
+│       │   ├── autoencoder.py         # ConvAutoencoder: Conv1D de cuatro niveles, cuello de 32 (D-022)
+│       │   └── preprocessing.py       # z-score por latido (D-008) y selección de N limpios (D-020)
+│       ├── train.py                   # python -m ecg.train: entrena y guarda runs/<run_id>/
+│       ├── score.py                   # python -m ecg.score: escribe scores_<split>.npz (C2)
 │       └── evaluate/                  # (Por implementar) Métricas, umbral y final_test.py
 └── tests/
     ├── test_config.py                 # Valida coherencia de splits y mapeos AAMI
     ├── test_contracts.py              # Valida C1 y C2 sobre datos sintéticos generados en tmp_path
-    └── test_io_guard.py               # Valida que load_beats bloquee el split test sin permiso
+    ├── test_io_guard.py               # Valida que load_beats bloquee el split test sin permiso
+    ├── test_autoencoder.py            # Formas, tamaño y preprocesamiento del autoencoder
+    └── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
 ```
 
 ---
