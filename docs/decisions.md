@@ -137,3 +137,29 @@ Este documento registra las decisiones metodológicas y técnicas tomadas en el 
 - **Decisión** (16 oct 2026): `notebooks/datos_mitbih_c1.ipynb` queda como el documento por etapas del pipeline (explicaciones, figuras y comprobaciones). El código definitivo pasa a `src/ecg/data/` (`records.py`, `filtering.py`, `segmentation.py`, `build.py`) con tests, y C1 se genera con `python -m ecg.data.build`. Cuando esos módulos existan, el notebook los importa en vez de definir sus propias funciones. Mientras tanto, el notebook genera C1.
 - **Por qué**: El notebook sirve para explicar y para mirar los datos; los módulos se prueban en CI (regla 10) y dan al equipo un comando reproducible.
 - **Alternativa descartada**: Dejar el notebook como generador oficial de C1, sin tests en CI ni un comando para el resto del equipo.
+
+---
+
+### D-020: Los latidos ruidosos quedan fuera del entrenamiento y de la detención temprana
+- **Decisión** (22 oct 2026): El autoencoder se entrena solo con los latidos de train con `label == 0` y `mlii_noisy == False`: 28 893 de 29 596 (quedan fuera 703). La detención temprana (D-021) usa también solo los N limpios de val: 8 451 de 8 492. Los latidos ruidosos sí reciben su error en C2, para que Evaluación pueda medir con y sin ruido (`clean_only`).
+- **Por qué**: El modelo debe aprender la forma de un latido normal limpio. Si entrena con ruido, aprende a reconstruirlo y se vuelve más tolerante con cualquier deformación, también con las anomalías.
+- **Alternativa descartada**: Entrenar con todos los N de train. Son solo el 2,4 %, pero agregan variación que no es fisiológica.
+
+---
+
+### D-021: El entrenamiento se detiene por el error de los N limpios de val
+- **Decisión** (22 oct 2026): Después de cada época se mide el MSE medio de los N limpios de val. Si no mejora durante `patience` épocas seguidas (10 en el baseline), el entrenamiento se detiene y se conservan los pesos de la mejor época. Máximo 100 épocas. Los valores están en `configs/train/*.yaml`.
+- **Por qué**: Evita sobreajustar a los pacientes de train sin usar las anomalías de val para decidir nada; esas quedan intactas para Evaluación.
+- **Limitación**: Los N de val sirven para detener el entrenamiento y también para fijar el umbral (D-010), así que su error puede salir levemente optimista. El efecto es pequeño, porque detener no ajusta pesos.
+- **Alternativa descartada**: Elegir la época o el modelo por la AUC de val. Usa las anomalías para decidir y, con solo 4 pacientes, se sobreajusta fácil.
+
+---
+
+### D-022: Arquitectura base: Conv1D de cuatro niveles y cuello denso de 32
+- **Decisión** (22 oct 2026): Concreta D-009.
+  - Encoder: cuatro bloques (`Conv1d` con filtro de 7 y paso 2, `BatchNorm1d`, `ReLU`) con 16, 32, 64 y 128 canales, que llevan la ventana de 1×256 a 128×16.
+  - Cuello: una capa densa de 2 048 a 32 valores.
+  - Decoder: el camino inverso. Una capa densa de 32 a 2 048, tres bloques de interpolación lineal ×2 + `Conv1d` + `BatchNorm1d` + `ReLU`, y una última interpolación con una `Conv1d` a un canal, sin activación.
+  - 284 961 parámetros. Pérdida MSE sobre el latido con z-score (D-008). Adam con tasa de aprendizaje 0,001, lotes de 256, semilla 42 y CPU. Todo en `configs/train/baseline.yaml`.
+- **Por qué**: El cuello de 32 obliga al modelo a describir cada latido con pocos números, y como solo ve latidos normales, aprende a describir solo esos. Un latido anómalo se reconstruye como el normal más parecido y su error sube. El cuello es denso para que cada uno de los 32 valores resuma el latido entero. Cuatro filtros de 7 apilados abarcan 91 muestras (253 ms): un QRS completo y parte de la P o la T.
+- **Alternativas descartadas**: Un cuello solo convolucional (128×16 = 2 048 valores, casi lo mismo que la entrada: podría copiar también las anomalías). Convoluciones transpuestas en el decoder (suelen dejar ondulaciones periódicas que el modelo tendría que aprender a cancelar). Filtros más grandes (más parámetros para el mismo alcance).
