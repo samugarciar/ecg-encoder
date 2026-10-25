@@ -1,6 +1,6 @@
 * @samugarciar @jossanchezal @AndresFe06 @Carlosgalvis77 @camimira445
 src/ecg/data/ @samugarciar @jossanchezal @camimira445
-src/ecg/models/ @AndresFe06 @Carlosgalvis77 
+src/ecg/models/ @AndresFe06 @Carlosgalvis77 @samugarciar
 src/ecg/train.py @Carlosgalvis77 @samugarciar
 src/ecg/score.py @AndresFe06 @samugarciar
 configs/train/ @Carlosgalvis77 @jossanchezal
