@@ -54,13 +54,16 @@ ecg-autoencoder/
 │       │   └── preprocessing.py       # z-score por latido (D-008) y selección de N limpios (D-020)
 │       ├── train.py                   # python -m ecg.train: entrena y guarda runs/<run_id>/
 │       ├── score.py                   # python -m ecg.score: escribe scores_<split>.npz (C2)
-│       └── evaluate/                  # Módulo de evaluación y reporte de métricas
+│       └── evaluate/
+│           ├── metrics.py             # Umbral p95 de los N de val (D-010) y métricas de C3
+│           └── __main__.py            # python -m ecg.evaluate: escribe results/<run_id>__<split>.json
 └── tests/
     ├── test_config.py                 # Validación de splits y constantes de config.py
     ├── test_contracts.py              # Validación de contratos C1 y C2 sobre mocks
     ├── test_io_guard.py               # Verificación de barrera de acceso al split test
     ├── test_autoencoder.py            # Formas, tamaño y preprocesamiento del autoencoder
-    └── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
+    ├── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
+    └── test_evaluate.py               # Umbral y métricas de C3 sobre casos calculados a mano y mocks
 ```
 
 ---
@@ -74,11 +77,22 @@ cd ecg-autoencoder
 ```
 
 ### 2. Crear y activar el entorno virtual con Python 3.11
+El entorno debe usar Python 3.11: las versiones fijadas en `requirements.txt` (torch 2.5.1, numpy 1.26.4, scipy, pandas) no tienen instaladores para Python 3.14, y `pip install` falla.
+
+macOS y Linux:
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-# En Windows: .venv\Scripts\activate
 ```
+
+Windows (PowerShell). En Windows no existe el comando `python3.11`; se usa el lanzador `py`:
+```powershell
+py install 3.11              # solo si `py -0p` no lista 3.11
+py -V:3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+python --version             # debe decir 3.11.x
+```
+Si ya creaste el `.venv` con otra versión, bórralo y créalo de nuevo con estos pasos.
 
 ### 3. Instalar las dependencias y el paquete en modo editable
 ```bash
