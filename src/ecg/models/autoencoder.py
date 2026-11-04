@@ -17,10 +17,38 @@ def _down_block(c_in: int, c_out: int, kernel_size: int) -> nn.Sequential:
     )
 
 
+def upsample2x_linear(x: torch.Tensor) -> torch.Tensor:
+    """Interpolación lineal ×2 (align_corners=False) escrita con desplazamientos y sumas.
+
+    Cada muestra se convierte en dos: 3/4 de ella más 1/4 de su vecina izquierda, y 3/4 de ella
+    más 1/4 de su vecina derecha, repitiendo la muestra del borde. Es la misma cuenta que hace
+    `nn.Upsample(scale_factor=2, mode="linear", align_corners=False)`.
+    """
+    left = torch.cat([x[..., :1], x[..., :-1]], dim=-1)
+    right = torch.cat([x[..., 1:], x[..., -1:]], dim=-1)
+    return torch.stack([0.75 * x + 0.25 * left, 0.75 * x + 0.25 * right], dim=-1).flatten(-2)
+
+
+class Upsample2x(nn.Upsample):
+    """Duplica el largo por interpolación lineal; en GPU usa `upsample2x_linear`.
+
+    En CUDA, el kernel de PyTorch para la interpolación lineal se llevaba el 60 % del tiempo
+    de entrenamiento; la versión con sumas es 4 veces más rápida. En CPU es al revés, así que
+    ahí se usa la de PyTorch. El resultado es el mismo y no tiene pesos: los runs anteriores
+    se cargan igual.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(scale_factor=2, mode="linear", align_corners=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return upsample2x_linear(x) if x.is_cuda else super().forward(x)
+
+
 def _up_block(c_in: int, c_out: int, kernel_size: int) -> nn.Sequential:
     """Duplica el largo por interpolación lineal y luego aplica una convolución."""
     return nn.Sequential(
-        nn.Upsample(scale_factor=2, mode="linear", align_corners=False),
+        Upsample2x(),
         nn.Conv1d(c_in, c_out, kernel_size, padding=kernel_size // 2),
         nn.BatchNorm1d(c_out),
         nn.ReLU(),
@@ -67,7 +95,7 @@ class ConvAutoencoder(nn.Module):
         reverse = widths[::-1]  # por defecto: 128, 64, 32, 16, 1
         self.decoder = nn.Sequential(
             *(_up_block(reverse[i], reverse[i + 1], kernel_size) for i in range(n_levels - 1)),
-            nn.Upsample(scale_factor=2, mode="linear", align_corners=False),
+            Upsample2x(),
             nn.Conv1d(reverse[-2], 1, kernel_size, padding=kernel_size // 2),
         )
 

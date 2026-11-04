@@ -6,8 +6,10 @@ import numpy as np
 import pytest
 import torch
 
-from ecg.models.autoencoder import ConvAutoencoder, count_parameters
+from ecg.models.autoencoder import ConvAutoencoder, count_parameters, upsample2x_linear
 from ecg.models.preprocessing import normal_mask, prepare_inputs, zscore_beats
+
+needs_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="requiere GPU CUDA")
 
 
 def test_default_architecture_shapes_and_size() -> None:
@@ -27,6 +29,27 @@ def test_encoder_halves_length_per_level() -> None:
         h = block(h)
         lengths.append((h.shape[1], h.shape[2]))
     assert lengths == [(16, 128), (32, 64), (64, 32), (128, 16)]
+
+
+@pytest.mark.parametrize("shape", [(4, 128, 16), (2, 16, 128), (3, 1, 5), (1, 1, 1)])
+def test_upsample2x_linear_matches_pytorch(shape: tuple[int, ...]) -> None:
+    """La interpolación con sumas da lo mismo que la de PyTorch, incluidos los bordes."""
+    x = torch.randn(shape, dtype=torch.float64)
+    expected = torch.nn.functional.interpolate(x, scale_factor=2, mode="linear",
+                                               align_corners=False)
+    assert torch.allclose(upsample2x_linear(x), expected, atol=1e-12)
+
+
+@needs_cuda
+def test_gpu_model_matches_cpu_model() -> None:
+    """El mismo modelo da la misma reconstrucción en CPU y en GPU, con los mismos pesos."""
+    torch.manual_seed(0)
+    model = ConvAutoencoder().eval()
+    x = torch.randn(8, 1, 256)
+    with torch.no_grad():
+        cpu_out = model(x)
+        gpu_out = model.to("cuda")(x.to("cuda")).cpu()
+    assert torch.allclose(cpu_out, gpu_out, atol=1e-4)
 
 
 @pytest.mark.parametrize("kwargs", [{"input_length": 250}, {"kernel_size": 6}, {"channels": ()}])
