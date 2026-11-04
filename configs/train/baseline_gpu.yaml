@@ -1,0 +1,24 @@
+# Baseline del autoencoder en GPU NVIDIA (CUDA). Mismos hiperparámetros que baseline.yaml;
+# solo cambian `name` y `device`. Requiere torch con CUDA (ver README, sección de instalación).
+# En una misma GPU, dos entrenamientos con la misma semilla dan las mismas pérdidas; frente a
+# CPU difieren en los últimos decimales. Para comparar experimentos, usa el mismo dispositivo.
+name: baseline_gpu
+seed: 42
+device: cuda
+
+data:
+  exclude_noisy: true  # D-020: sin latidos con mlii_noisy en el entrenamiento ni en la detención
+  normalization: zscore  # D-008: "zscore" por latido o "none" (experimento pendiente)
+
+model:
+  input_length: 256
+  channels: [16, 32, 64, 128]  # un nivel del encoder por valor: 256 → 128 → 64 → 32 → 16
+  kernel_size: 7
+  latent_dim: 32  # D-009: tamaño del cuello de botella
+
+training:
+  batch_size: 256
+  learning_rate: 0.001
+  max_epochs: 100
+  patience: 10  # D-021: épocas seguidas sin mejorar el error de los N limpios de val
+  min_delta: 0.0  # mejora mínima para contar como mejora

@@ -19,7 +19,8 @@ ecg-autoencoder/
 │       └── ci.yml                     # Integración continua (Python 3.11, ruff, pytest)
 ├── configs/
 │   └── train/
-│       └── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
+│       ├── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
+│       └── baseline_gpu.yaml          # El mismo baseline en GPU NVIDIA (device: cuda)
 ├── data/
 │   ├── raw/
 │   │   └── mitbih_database/           # 96 archivos crudos (48 registros .csv y .txt) [SOLO LECTURA]
@@ -99,6 +100,12 @@ Si ya creaste el `.venv` con otra versión, bórralo y créalo de nuevo con esto
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
+```
+
+Opcional, para entrenar en una GPU NVIDIA: `requirements.txt` instala torch solo para CPU. Con el `.venv` activo, reemplázalo por la misma versión con CUDA y entrena con `configs/train/baseline_gpu.yaml`:
+```bash
+pip install --force-reinstall --no-deps torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+python -c "import torch; print(torch.cuda.is_available())"   # debe decir True
 ```
 
 ### 4. Configurar la limpieza automática de notebooks
