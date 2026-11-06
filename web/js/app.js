@@ -126,7 +126,7 @@ async function loadSignalText(text, name) {
   $("signal-name").textContent = name;
   $("signal-detail").textContent = `${fmt(csv.values[0].length, 0)} muestras en ${csv.columns.length} `
     + `${csv.columns.length === 1 ? "columna" : "columnas"}`;
-  $("dropzone").hidden = true;
+  setZoneLoaded("dropzone", "signal-dz-title", true);
   $("signal-chip").hidden = false;
   updateSummary();
   setStatus(csv.skipped ? `Se omitieron ${csv.skipped} filas que no eran numéricas.` : "");
@@ -138,10 +138,20 @@ async function loadAnnotationText(text, name) {
   state.annName = name;
   $("ann-chip-name").textContent = name;
   $("ann-chip-detail").textContent = `${fmt(state.annotations.samples.length, 0)} latidos anotados`;
-  $("ann-dropzone").hidden = true;
+  setZoneLoaded("ann-dropzone", "ann-dz-title", true);
   $("ann-chip").hidden = false;
   $("opt-ann-wrap").hidden = false;
   $("opt-use-ann").checked = true;
+}
+
+// Con un archivo cargado, la zona de carga sigue visible pero compacta, para poder cambiarlo
+const ZONE_TITLES = {
+  "signal-dz-title": ["Cargue la señal", "Cargar otra señal"],
+  "ann-dz-title": ["Anotaciones de los latidos, si las tiene", "Cargar otras anotaciones"],
+};
+function setZoneLoaded(zoneId, titleId, loaded) {
+  $(zoneId).classList.toggle("is-loaded", loaded);
+  $(titleId).textContent = ZONE_TITLES[titleId][loaded ? 1 : 0];
 }
 
 // Al cambiar o quitar la señal se descartan las anotaciones, para no usar los R de otro registro
@@ -150,7 +160,7 @@ function clearAnnotations() {
   state.annName = "";
   $("ann-file").value = "";
   $("ann-chip").hidden = true;
-  $("ann-dropzone").hidden = false;
+  setZoneLoaded("ann-dropzone", "ann-dz-title", false);
   $("opt-ann-wrap").hidden = true;
 }
 
@@ -161,7 +171,7 @@ function clearSignal() {
   state.selected = null;
   $("signal-file").value = "";
   $("signal-chip").hidden = true;
-  $("dropzone").hidden = false;
+  setZoneLoaded("dropzone", "signal-dz-title", false);
   $("options").hidden = true;
   $("options-empty").hidden = false;
   $("results").hidden = true;

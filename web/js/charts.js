@@ -44,8 +44,9 @@ function setup(canvas) {
 
 export function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = seconds - m * 60;
+  const total = Math.round(seconds * 10) / 10; // redondea antes, para no mostrar "0:60.0"
+  const m = Math.floor(total / 60);
+  const s = total - m * 60;
   return `${m}:${s.toFixed(1).padStart(4, "0")}`;
 }
 
