@@ -7,18 +7,21 @@ function tokens() {
   const css = getComputedStyle(document.documentElement);
   const get = (name) => css.getPropertyValue(name).trim();
   return {
-    surface: get("--card"),
-    text: get("--text"),
-    text2: get("--text-2"),
+    surface: get("--surface"),
+    paper: get("--paper"),
+    text: get("--ink"),
+    text2: get("--ink-2"),
     muted: get("--muted"),
-    grid: get("--grid"),
-    gridStrong: get("--grid-strong"),
-    trace: get("--trace"),
-    accent: get("--accent"),
-    critical: get("--critical"),
-    criticalWash: get("--critical-wash"),
-    accentWash: get("--accent-wash"),
-    font: "12px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    grid: get("--line"),
+    gridStrong: get("--line-strong"),
+    paperMinor: get("--grid-minor"),
+    paperMajor: get("--grid-major"),
+    trace: get("--ink"),
+    accent: get("--primary"),
+    critical: get("--atypical"),
+    criticalWash: get("--atypical-wash"),
+    accentWash: get("--primary-wash"),
+    font: "13px 'Atkinson Hyperlegible Next', 'Segoe UI', system-ui, sans-serif",
   };
 }
 
@@ -107,9 +110,11 @@ export function drawErrorChart(canvas, result, view) {
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   const step = niceStep(result.duration, Math.max(2, Math.floor(plotW / 90)));
+  ctx.fillStyle = t.muted;
   for (let s = 0; s <= result.duration; s += step) {
-    ctx.fillStyle = t.muted;
-    ctx.fillText(formatTime(s), x(s), height - PAD.bottom + 8);
+    // La última etiqueta se alinea a la derecha para no salirse del canvas
+    ctx.textAlign = x(s) + 30 > width ? "right" : "center";
+    ctx.fillText(formatTime(s), Math.min(x(s), width - 2), height - PAD.bottom + 8);
   }
 
   // Ventana visible del trazado
@@ -165,27 +170,40 @@ export function drawStrip(canvas, result, view) {
   const y = (mv) => top + (1 - (mv - yMin) / (yMax - yMin)) * plotH;
 
   ctx.font = t.font;
-  // Rejilla tipo papel de ECG: 0,2 s y 0,5 mV
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = t.grid;
-  for (let s = Math.ceil(view.start / 0.2) * 0.2; s <= view.end; s += 0.2) {
-    const xx = Math.round(x(s)) + 0.5;
+  // Papel de ECG: cuadros pequeños de 0,04 s × 0,1 mV y grandes de 0,2 s × 0,5 mV
+  ctx.fillStyle = t.paper;
+  ctx.fillRect(PAD.left, top, plotW, plotH);
+  const vLines = (stepS, color) => {
+    ctx.strokeStyle = color;
     ctx.beginPath();
-    ctx.moveTo(xx, top);
-    ctx.lineTo(xx, top + plotH);
+    for (let k = Math.ceil(view.start / stepS); k * stepS <= view.end; k += 1) {
+      const xx = Math.round(x(k * stepS)) + 0.5;
+      ctx.moveTo(xx, top);
+      ctx.lineTo(xx, top + plotH);
+    }
     ctx.stroke();
-  }
+  };
+  const hLines = (stepMv, color) => {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    for (let k = Math.ceil(yMin / stepMv); k * stepMv <= yMax; k += 1) {
+      const yy = Math.round(y(k * stepMv)) + 0.5;
+      ctx.moveTo(PAD.left, yy);
+      ctx.lineTo(width - PAD.right, yy);
+    }
+    ctx.stroke();
+  };
+  ctx.lineWidth = 1;
+  if (x(view.start + 0.04) - x(view.start) >= 3) vLines(0.04, t.paperMinor);
+  if (y(yMin) - y(yMin + 0.1) >= 3) hLines(0.1, t.paperMinor);
+  vLines(0.2, t.paperMajor);
+  hLines(0.5, t.paperMajor);
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  for (let v = Math.ceil(yMin / 0.5) * 0.5; v <= yMax; v += 0.5) {
-    const yy = Math.round(y(v)) + 0.5;
-    ctx.strokeStyle = Math.abs(v) < 1e-9 ? t.gridStrong : t.grid;
-    ctx.beginPath();
-    ctx.moveTo(PAD.left, yy);
-    ctx.lineTo(width - PAD.right, yy);
-    ctx.stroke();
-    ctx.fillStyle = t.muted;
-    ctx.fillText(v.toFixed(1), PAD.left - 8, yy);
+  ctx.fillStyle = t.muted;
+  for (let k = Math.ceil(yMin / 0.5); k * 0.5 <= yMax; k += 1) {
+    ctx.fillText((k * 0.5).toLocaleString("es-CO", { minimumFractionDigits: 1 }),
+      PAD.left - 8, y(k * 0.5));
   }
   ctx.save();
   ctx.translate(14, top + plotH / 2);
@@ -216,7 +234,7 @@ export function drawStrip(canvas, result, view) {
   ctx.rect(PAD.left, top, plotW, plotH);
   ctx.clip();
   ctx.strokeStyle = t.trace;
-  ctx.lineWidth = 1.25;
+  ctx.lineWidth = 1.5;
   ctx.lineJoin = "round";
   ctx.beginPath();
   const perPx = (i1 - i0) / plotW;

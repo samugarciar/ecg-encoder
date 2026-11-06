@@ -53,12 +53,13 @@ function escapeHtml(text) {
 
 function renderModelInfo(card) {
   const badge = $("model-badge");
-  badge.textContent = `${card.is_demo ? "Modelo de demostración" : "Modelo"} · ${card.run_id}`;
+  badge.textContent = card.is_demo ? "Modelo de demostración" : `Modelo ${card.run_id}`;
+  badge.title = card.run_id;
   badge.classList.toggle("is-demo", card.is_demo);
   $("demo-banner").hidden = !card.is_demo;
-  $("footer-model").textContent = `Modelo ${card.run_id} · umbral ${fmt(card.threshold.value, 5)} `
-    + `(percentil ${fmt(card.threshold.percentile, 0)} de los latidos normales de validación) · `
-    + `exportado ${card.exported_at.slice(0, 10)} · commit ${card.git_commit.slice(0, 7)}`;
+  $("footer-model").textContent = `Modelo ${card.run_id}, exportado el ${card.exported_at.slice(0, 10)} `
+    + `desde el commit ${card.git_commit.slice(0, 7)}. Umbral ${fmt(card.threshold.value, 5)}: percentil `
+    + `${fmt(card.threshold.percentile, 0)} del error en los latidos normales de validación.`;
 
   const g = card.validation.global;
   const aami = card.validation.per_aami_sensitivity;
@@ -136,8 +137,9 @@ function updateSummary() {
   if (!state.csv) return;
   const n = state.csv.values[0].length;
   const fs = Number($("opt-fs").value);
-  $("file-summary").textContent = `${fmt(n, 0)} muestras · ${state.csv.columns.length} columnas`
-    + (fs > 0 ? ` · ${formatTime(n / fs)} de registro` : "");
+  $("file-summary").textContent = `${fmt(n, 0)} muestras en ${state.csv.columns.length} `
+    + `${state.csv.columns.length === 1 ? "columna" : "columnas"}`
+    + (fs > 0 ? `, ${formatTime(n / fs)} de registro.` : ".");
 }
 
 /* ---------- Análisis ---------- */
@@ -174,10 +176,14 @@ async function analyze() {
     result.lead = state.csv.columns[column];
     state.result = result;
     state.sort = { key: "time", dir: 1 };
+    // En pantallas angostas, 10 s de trazado quedan muy apretados
+    const span = window.innerWidth < 600 ? 5 : Number($("strip-span").value);
+    $("strip-span").value = String(span);
+    state.view = { start: 0, end: span };
     const firstAtypical = result.beats.find((b) => b.atypical);
     state.onlyAtypical = result.nAtypical > 0;
     $("only-atypical").checked = state.onlyAtypical;
-    setStatus(`Listo: ${fmt(result.beats.length, 0)} latidos analizados.`);
+    setStatus(`Registro analizado: ${fmt(result.beats.length, 0)} latidos.`);
     renderResults();
     selectBeat(firstAtypical ? firstAtypical.row : 0, true);
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -200,22 +206,26 @@ function renderResults() {
     + (r.droppedEdge ? `<li>${r.droppedEdge} latido(s) en los bordes del registro no tienen ventana completa y no se analizaron.</li>` : "");
 
   const share = r.beats.length ? r.nAtypical / r.beats.length : 0;
-  const tiles = [
-    { label: "Latidos atípicos", value: `<span class="tri" aria-hidden="true"></span>${fmt(r.nAtypical, 0)}`,
-      sub: `${fmt(100 * share, 1)} % de los latidos`, hero: true },
-    { label: "Latidos analizados", value: fmt(r.beats.length, 0), sub: "con ventana completa" },
-    { label: "Frecuencia cardíaca", value: Number.isFinite(r.heartRate) ? `${fmt(r.heartRate, 0)} lpm` : "—",
-      sub: "mediana, por RR" },
-    { label: "Duración", value: formatTime(r.duration), sub: `${fmt(r.duration, 0)} s a ${r.fs} Hz` },
-    { label: "Picos R", value: r.rSource === "annotations" ? "Anotados" : "Detectados",
-      sub: r.rSource === "annotations" ? state.annName : "detector automático (sin validar)" },
+  const none = r.nAtypical === 0;
+  $("summary").innerHTML = `
+    <div class="count-line">
+      <span class="count-tri${none ? " is-none" : ""}" aria-hidden="true"></span>
+      <span class="count-num">${fmt(r.nAtypical, 0)}</span>
+    </div>
+    <p class="count-label">${r.nAtypical === 1 ? "latido atípico" : "latidos atípicos"}</p>
+    <p class="count-sub">${none ? "Ningún latido supera el umbral. Esto no descarta una arritmia."
+    : `${fmt(100 * share, 1)} % de ${fmt(r.beats.length, 0)} latidos analizados`}</p>`;
+
+  const fields = [
+    ["Duración", formatTime(r.duration), `${fmt(r.duration, 0)} s a ${r.fs} Hz`],
+    ["Frecuencia cardíaca", Number.isFinite(r.heartRate) ? `${fmt(r.heartRate, 0)} lpm` : "—",
+      "mediana de los RR"],
+    ["Latidos analizados", fmt(r.beats.length, 0), "con ventana completa"],
+    ["Picos R", r.rSource === "annotations" ? "Anotados" : "Detectados",
+      r.rSource === "annotations" ? state.annName : "detector automático sin validar"],
   ];
-  $("tiles").innerHTML = tiles.map((t) => `
-    <div class="tile${t.hero ? " tile-hero" : ""}">
-      <div class="tile-label">${t.label}</div>
-      <div class="tile-value">${t.value}</div>
-      <div class="tile-sub">${escapeHtml(t.sub)}</div>
-    </div>`).join("");
+  $("tiles").innerHTML = fields.map(([label, value, sub]) => `
+    <div><dt>${label}</dt><dd>${value}<small>${escapeHtml(sub)}</small></dd></div>`).join("");
 
   renderAgreement();
   $("prev-atyp").disabled = r.nAtypical === 0;
@@ -365,7 +375,7 @@ function showTip(tip, canvas, x, y, html) {
 }
 
 function beatTip(b) {
-  return `<strong>Latido ${b.row + 1}</strong> · ${formatTime(b.time)}<br>`
+  return `<strong>Latido ${b.row + 1}</strong>, en ${formatTime(b.time)}<br>`
     + `Error: ${fmt(b.ratio, 2)}× el umbral<br>`
     + (b.symbol ? `Anotación: ${escapeHtml(b.symbol)}<br>` : "")
     + (b.atypical ? "▲ Atípico" : "● Dentro del umbral");
@@ -533,7 +543,7 @@ async function handleSignalFile(file) {
     $("ann-file").value = "";
     $("ann-name").textContent = ANN_HINT;
     await loadSignalText(await readFile(file), file.name);
-    setStatus("Revise las opciones y pulse «Analizar».");
+    setStatus("Revise cómo se va a leer el archivo y pulse «Analizar el registro».");
   } catch (err) {
     setStatus(err.message, true);
   }
@@ -541,5 +551,6 @@ async function handleSignalFile(file) {
 
 bindEvents();
 ensureModel().catch(() => {});
+document.fonts?.ready.then(drawAll);
 // index.html?ejemplo abre la página con el ECG de ejemplo ya analizado
 if (new URLSearchParams(window.location.search).has("ejemplo")) runSample();
