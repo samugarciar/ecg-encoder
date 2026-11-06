@@ -36,18 +36,28 @@ python scripts/serve_web.py          # http://localhost:8000
 | `vercel.json`, `.vercelignore` | Despliegue estático y cabeceras de seguridad (CSP que solo permite el CDN de onnxruntime). El README no se publica. |
 
 **Diseño**
-- La idea central es el papel de electrocardiograma: cuadrícula rosada de 1 mm y 5 mm con trazo en
-  tinta azul. Aparece en la portada, con un trazo que se dibuja una vez al cargar e incluye un
-  latido ventricular marcado, y en la tira de resultados, donde la cuadrícula está alineada con el
-  tiempo y el voltaje reales (0,04 s × 0,1 mV y 0,2 s × 0,5 mV). Todo lo demás es sobrio.
+- Paneles, como una estación de lectura. A la izquierda, un panel lateral azul tinta con lo que el
+  médico controla: la señal, las anotaciones, cómo se va a leer el archivo, el botón para analizar,
+  los formatos aceptados, el ejemplo, el modelo con sus métricas y el aviso académico. A la
+  derecha, los paneles de resultados en orden de lectura: resumen, trazado, error por latido,
+  latido seleccionado junto a las anotaciones, tabla y cómo funciona. En pantallas de menos de
+  960 px, el panel lateral pasa arriba.
+- Antes de analizar, el área de lectura muestra un panel con tres pasos para empezar.
+- La cinta del modelo de demostración va arriba de todo, a lo ancho, para verse en cualquier
+  pantalla.
+- La idea visual central es el papel de electrocardiograma: cuadrícula rosada de 1 mm y 5 mm con
+  trazo en tinta azul. Aparece en el panel inicial, con un trazo que se dibuja una vez al cargar e
+  incluye un latido ventricular marcado, y en el panel del trazado, donde la cuadrícula está
+  alineada con el tiempo y el voltaje reales (0,04 s × 0,1 mV y 0,2 s × 0,5 mV). Todo lo demás es
+  sobrio.
 - Rojo reservado para lo atípico y siempre acompañado de un triángulo, para que no dependa solo del
   color. Azul para la reconstrucción y las acciones.
 - Tipografía Atkinson Hyperlegible Next, del Braille Institute, pensada para leerse sin
   ambigüedad: su cero lleva barra para no confundirlo con la O.
 - Modo claro y oscuro, celular (en pantallas angostas la tira muestra 5 s), teclado (enlace para
   saltar a la carga, foco visible) y movimiento reducido (sin la animación del trazo).
-- Impresión: oculta la portada y los controles, conserva la cuadrícula y agrega el aviso de que no
-  es un dispositivo médico.
+- Impresión: oculta el panel lateral, el panel inicial y los controles, conserva la cuadrícula y
+  agrega el aviso de que no es un dispositivo médico.
 
 **Qué ve el médico**
 1. Carga un CSV con la señal (y, opcionalmente, las anotaciones de los latidos). La derivación, la
