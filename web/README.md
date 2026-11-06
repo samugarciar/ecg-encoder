@@ -32,19 +32,36 @@ python scripts/serve_web.py          # http://localhost:8000
 | `model/model.json` | Run, umbral, normalización y métricas de validación que se muestran al médico. |
 | `model/preprocessing.json` | fs, conversión A/D, ventana y coeficientes del filtro, **generados desde `src/ecg/config.py`** (D-015). |
 | `samples/` | ECG continuo **sintético** de 60 s con sus anotaciones, para el botón de ejemplo. |
-| `vercel.json` | Despliegue estático y cabeceras de seguridad (CSP que solo permite el CDN de onnxruntime). |
+| `fonts/` | Atkinson Hyperlegible Next (licencia OFL, en `fonts/OFL.txt`), alojada en el sitio para no enviarle a Google la IP del médico. |
+| `vercel.json`, `.vercelignore` | Despliegue estático y cabeceras de seguridad (CSP que solo permite el CDN de onnxruntime). El README no se publica. |
+
+**Diseño**
+- La idea central es el papel de electrocardiograma: cuadrícula rosada de 1 mm y 5 mm con trazo en
+  tinta azul. Aparece en la portada, con un trazo que se dibuja una vez al cargar e incluye un
+  latido ventricular marcado, y en la tira de resultados, donde la cuadrícula está alineada con el
+  tiempo y el voltaje reales (0,04 s × 0,1 mV y 0,2 s × 0,5 mV). Todo lo demás es sobrio.
+- Rojo reservado para lo atípico y siempre acompañado de un triángulo, para que no dependa solo del
+  color. Azul para la reconstrucción y las acciones.
+- Tipografía Atkinson Hyperlegible Next, del Braille Institute, pensada para leerse sin
+  ambigüedad: su cero lleva barra para no confundirlo con la O.
+- Modo claro y oscuro, celular (en pantallas angostas la tira muestra 5 s), teclado (enlace para
+  saltar a la carga, foco visible) y movimiento reducido (sin la animación del trazo).
+- Impresión: oculta la portada y los controles, conserva la cuadrícula y agrega el aviso de que no
+  es un dispositivo médico.
 
 **Qué ve el médico**
 1. Carga un CSV con la señal (y, opcionalmente, las anotaciones de los latidos). La derivación, la
    frecuencia y las unidades se detectan solas y se pueden corregir antes de analizar.
-2. Resumen: latidos atípicos (n y %), latidos analizados, FC mediana, duración y de dónde salieron
-   los picos R.
-3. Error de cada latido en el tiempo (veces el umbral). Al hacer clic en un latido, se ve en el
-   trazado filtrado (cuadrícula de 0,2 s × 0,5 mV) y superpuesto con su reconstrucción.
-4. Tabla de latidos ordenable, con navegación entre atípicos, descarga en CSV e impresión.
-5. Si cargó anotaciones: cuántos latidos de cada símbolo se marcaron (sensibilidad y especificidad
+2. Resumen, como en la cabecera de un ECG impreso: cuántos latidos atípicos hay (n y %), duración,
+   FC mediana, latidos analizados y de dónde salieron los picos R.
+3. La tira del trazado filtrado sobre papel de ECG, con un marcador sobre cada latido. Al hacer clic
+   en un marcador o en un punto del gráfico de errores, se ve el latido superpuesto con su
+   reconstrucción.
+4. El error de cada latido en el tiempo (veces el umbral).
+5. Tabla de latidos ordenable, con navegación entre atípicos, descarga en CSV e impresión.
+6. Si cargó anotaciones: cuántos latidos de cada símbolo se marcaron (sensibilidad y especificidad
    frente al cardiólogo).
-6. El método, las limitaciones y las métricas del modelo, en lenguaje claro.
+7. El método, las limitaciones y las métricas del modelo, en lenguaje claro.
 
 **Formatos que acepta**
 - Señal: CSV con comas, punto y coma o tabulaciones, con o sin encabezado. Si hay una columna
@@ -75,8 +92,10 @@ Dependencia nueva: `onnx==1.17.0` en `requirements.txt` (aprobada), para verific
   a 1e-9. Las ventanas son idénticas y el z-score coincide a 1e-5.
 - **De punta a punta:** con el ECG de ejemplo, onnxruntime-web en Node dio el mismo error por
   latido que `ecg.score` (diferencia máxima de 1,2e-7) y las mismas 72 decisiones.
-- **En navegador:** Brave sin interfaz, con la CSP de `vercel.json` activa, sin errores de consola.
-  Se probaron el modo claro, el oscuro y un ancho de 390 px.
+- **En navegador:** Brave sin interfaz, con la CSP de `vercel.json` activa, sin errores de consola
+  y sin desplazamiento horizontal. Se probaron el modo claro, el oscuro, 390 px de ancho e
+  impresión, y las interacciones: detector sin anotaciones, siguiente atípico, duración visible,
+  orden y filtro de la tabla.
 - **Caso genérico:** una sola columna en mV a 250 Hz, sin anotaciones. Se remuestreó, el detector
   encontró los 72 latidos y salieron los mismos 14 atípicos.
 - `pytest -q`: 53 aprobadas y 1 omitida (GPU). `ruff check .`: sin errores.

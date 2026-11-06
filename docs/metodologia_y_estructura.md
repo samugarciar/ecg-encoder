@@ -64,7 +64,10 @@ flowchart LR
     C1 -->|"Entrenamiento & Scoring\n(src/ecg/models/)"| C2["Contrato C2\nscores_<split>.npz"]
     C2 -->|"Evaluación & Umbral\n(src/ecg/evaluate/)"| C3["Contrato C3\n<run_id>__<split>.json"]
     C3 -->|"Agregación\n(scripts/aggregate_results.py)"| Board["results/leaderboard.md"]
+    C3 -->|"Exportación a ONNX\n(scripts/export_web_model.py)"| Web["web/model/\ninterfaz para médicos"]
 ```
+
+La interfaz web (`web/`, D-023) no es un contrato nuevo: lee el umbral de C3 y repite en el navegador el preprocesamiento de C1 y el cálculo de error de C2.
 
 ### Contrato C1: Latidos Extraídos (`data/processed/beats.npz`)
 * `X`: `float32`, forma `(n, 256)`. Derivación MLII filtrada (0.5–40 Hz), en mV, **sin normalizar**.
@@ -109,31 +112,37 @@ ecg-autoencoder/
 │       └── ci.yml                     # Pipeline CI (Python 3.11, CPU Torch, ruff, pytest)
 ├── configs/
 │   └── train/
-│       └── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
+│       ├── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
+│       ├── baseline_gpu.yaml          # El mismo baseline en GPU NVIDIA (device: cuda)
+│       └── demo_web.yaml              # Modelo de demostración sintético para la interfaz web (D-023)
 ├── data/
 │   ├── raw/
 │   │   └── mitbih_database/           # 96 archivos originales (.csv y annotations.txt)
-│   ├── processed/                     # Salida C1 (beats_mock.npz, meta_mock.json)
+│   ├── processed/                     # Salida C1 (beats.npz y meta.json; no se sube a git)
 │   ├── MANIFEST.sha256                # Checksums SHA-256 de los 96 archivos crudos
 │   └── README.md                      # Documentación del origen y verificación de datos
 ├── docs/
 │   ├── contracts.md                   # Definición técnica formal de contratos C1, C2 y C3
-│   ├── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
+│   ├── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-023)
 │   └── metodologia_y_estructura.md   # Este resumen metodológico
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
 ├── notebooks/                         # datos_mitbih_c1.ipynb y modelo_autoencoder.ipynb (por etapas) y exploraciones por persona
 ├── results/
+│   ├── <run_id>__<split>.json         # Métricas C3 de cada run evaluado
 │   └── leaderboard.md                 # Tabla comparativa de experimentos
-├── runs/
-│   └── mock/                          # Salida de scores sintéticos C2
+├── runs/                              # Un directorio por entrenamiento (no se sube a git)
 ├── scripts/
 │   ├── make_manifest.py               # Generador de data/MANIFEST.sha256
 │   ├── verify_raw_data.py             # Verificador de integridad de datos crudos
 │   ├── make_mock_beats.py             # Generador de latidos sintéticos C1 (P/QRS/T gaussianos)
 │   ├── make_mock_scores.py            # Generador de errores sintéticos C2 (distribución lognormal)
 │   ├── inspect_beats.py               # Resumen de las columnas de beats.npz (solo train y val)
-│   └── aggregate_results.py           # Compilador de JSONs en results/leaderboard.md
+│   ├── aggregate_results.py           # Compilador de JSONs en results/leaderboard.md
+│   ├── export_web_model.py            # Exporta un run a web/model/ (ONNX, umbral, preprocesamiento)
+│   ├── make_demo_ecg.py               # ECG continuo sintético de ejemplo para la interfaz
+│   ├── serve_web.py                   # Sirve web/ en local con las cabeceras de Vercel
+│   └── validate_r_detector.py         # Detector de picos R de la interfaz contra MIT-BIH (solo DS1)
 ├── src/
 │   └── ecg/
 │       ├── __init__.py                # Paquete ecg versión 0.1.0
@@ -148,13 +157,20 @@ ecg-autoencoder/
 │       │   └── preprocessing.py       # z-score por latido (D-008) y selección de N limpios (D-020)
 │       ├── train.py                   # python -m ecg.train: entrena y guarda runs/<run_id>/
 │       ├── score.py                   # python -m ecg.score: escribe scores_<split>.npz (C2)
-│       └── evaluate/                  # (Por implementar) Métricas, umbral y final_test.py
-└── tests/
+│       └── evaluate/
+│           ├── metrics.py             # Umbral p95 de los N de val (D-010) y métricas de C3
+│           └── __main__.py            # python -m ecg.evaluate: escribe results/<run_id>__<split>.json
+│                                      # (final_test.py, para DS2, todavía no existe)
+├── tests/
     ├── test_config.py                 # Valida coherencia de splits y mapeos AAMI
     ├── test_contracts.py              # Valida C1 y C2 sobre datos sintéticos generados en tmp_path
     ├── test_io_guard.py               # Valida que load_beats bloquee el split test sin permiso
     ├── test_autoencoder.py            # Formas, tamaño y preprocesamiento del autoencoder
-    └── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
+    ├── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
+    ├── test_evaluate.py               # Umbral y métricas de C3 sobre casos calculados a mano y mocks
+    ├── test_web_export.py             # Exportación a ONNX y coherencia de web/model/
+    └── test_web_dsp.py                # web/js/dsp.js contra scipy y numpy (requiere Node.js)
+└── web/                               # Interfaz para médicos, sitio estático para Vercel (web/README.md)
 ```
 
 ---
