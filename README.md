@@ -20,7 +20,8 @@ ecg-autoencoder/
 ├── configs/
 │   └── train/
 │       ├── baseline.yaml              # Hiperparámetros del autoencoder baseline (D-020 a D-022)
-│       └── baseline_gpu.yaml          # El mismo baseline en GPU NVIDIA (device: cuda)
+│       ├── baseline_gpu.yaml          # El mismo baseline en GPU NVIDIA (device: cuda)
+│       └── demo_web.yaml              # Modelo de demostración sintético para la interfaz web (D-023)
 ├── data/
 │   ├── raw/
 │   │   └── mitbih_database/           # 96 archivos crudos (48 registros .csv y .txt) [SOLO LECTURA]
@@ -29,7 +30,7 @@ ecg-autoencoder/
 │   └── README.md                      # Documentación del origen y uso de datos
 ├── docs/
 │   ├── contracts.md                   # Contratos de interfaces de datos (C1, C2, C3)
-│   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-019)
+│   └── decisions.md                   # Registro de decisiones de arquitectura (ADR D-001 a D-023)
 ├── notebooks/                         # datos_mitbih_c1.ipynb y modelo_autoencoder.ipynb (por etapas) y exploraciones por autor
 ├── models/
 │   └── frozen/                        # Checkpoints congelados para evaluación final
@@ -40,7 +41,11 @@ ecg-autoencoder/
 │   ├── make_mock_beats.py             # Genera latidos sintéticos mock (C1)
 │   ├── make_mock_scores.py            # Genera puntuaciones mock de error (C2)
 │   ├── inspect_beats.py               # Resume las columnas de beats.npz (train y val)
-│   └── aggregate_results.py           # Agrega resultados JSON a results/leaderboard.md
+│   ├── aggregate_results.py           # Agrega resultados JSON a results/leaderboard.md
+│   ├── export_web_model.py            # Exporta un run a web/model/ (ONNX, umbral, preprocesamiento)
+│   ├── make_demo_ecg.py               # ECG continuo sintético de ejemplo para la interfaz
+│   ├── serve_web.py                   # Sirve web/ en local con las cabeceras de Vercel
+│   └── validate_r_detector.py         # Mide el detector de picos R de la interfaz contra MIT-BIH (DS1)
 ├── src/
 │   └── ecg/
 │       ├── __init__.py                # Inicializador del paquete ecg
@@ -64,7 +69,10 @@ ecg-autoencoder/
     ├── test_io_guard.py               # Verificación de barrera de acceso al split test
     ├── test_autoencoder.py            # Formas, tamaño y preprocesamiento del autoencoder
     ├── test_train_score.py            # Entrenamiento, determinismo y C2 sobre un C1 sintético
-    └── test_evaluate.py               # Umbral y métricas de C3 sobre casos calculados a mano y mocks
+    ├── test_evaluate.py               # Umbral y métricas de C3 sobre casos calculados a mano y mocks
+    ├── test_web_export.py             # Exportación a ONNX y coherencia de web/model/
+    └── test_web_dsp.py                # web/js/dsp.js contra scipy y numpy (requiere Node.js)
+└── web/                               # Interfaz para médicos, sitio estático para Vercel (ver web/README.md)
 ```
 
 ---
@@ -126,6 +134,14 @@ Si todo es correcto, verás: `OK: Los 96 archivos en RAW_DIR coinciden exactamen
 pytest -q
 ruff check .
 ```
+Las pruebas de `tests/test_web_dsp.py` corren el JavaScript de la interfaz con Node.js; si Node no está instalado, se omiten.
+
+### 7. Interfaz web para médicos
+`web/` es un sitio estático que analiza un ECG en el navegador con el modelo exportado a ONNX (D-023). Para probarla en local:
+```bash
+python scripts/serve_web.py          # http://localhost:8000  (con /?ejemplo carga un ECG sintético)
+```
+Cómo conectar un run real, cómo desplegar en Vercel y qué falta: [`web/README.md`](web/README.md).
 
 ---
 
