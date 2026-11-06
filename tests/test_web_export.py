@@ -95,7 +95,13 @@ def test_validate_r_detector_refuses_test_records(monkeypatch: pytest.MonkeyPatc
 def test_preprocessing_json_is_in_sync_with_config() -> None:
     """web/model/preprocessing.json sale de config.py (D-015); si cambia config, se regenera."""
     committed = json.loads((WEB_MODEL / "preprocessing.json").read_text(encoding="utf-8"))
-    assert committed == json.loads(json.dumps(preprocessing_spec()))
+    expected = json.loads(json.dumps(preprocessing_spec()))
+    # Los coeficientes del filtro cambian en el último decimal según la plataforma (Windows o
+    # Linux): se comparan con tolerancia; el resto debe ser idéntico
+    for key in ("sos", "zi"):
+        assert np.allclose(committed["filter"].pop(key), expected["filter"].pop(key),
+                           rtol=1e-12, atol=1e-14), key
+    assert committed == expected
 
 
 def test_published_model_is_consistent() -> None:
