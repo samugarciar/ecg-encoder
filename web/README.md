@@ -32,41 +32,65 @@ python scripts/serve_web.py          # http://localhost:8000
 | `model/model.json` | Run, umbral, normalización y métricas de validación que se muestran al médico. |
 | `model/preprocessing.json` | fs, conversión A/D, ventana y coeficientes del filtro, **generados desde `src/ecg/config.py`** (D-015). |
 | `samples/` | ECG continuo **sintético** de 60 s con sus anotaciones, para el botón de ejemplo. |
-| `fonts/` | Atkinson Hyperlegible Next (licencia OFL, en `fonts/OFL.txt`), alojada en el sitio para no enviarle a Google la IP del médico. |
+| `fonts/` | Inter (licencia OFL, en `fonts/OFL.txt`), descargada de Google Fonts y alojada en el sitio para no enviarle a Google la IP del médico. |
 | `vercel.json`, `.vercelignore` | Despliegue estático y cabeceras de seguridad (CSP que solo permite el CDN de onnxruntime). El README no se publica. |
 
 **Diseño**
-- Paneles, como una estación de lectura. A la izquierda, un panel lateral azul tinta con lo que el
-  médico controla: la señal, las anotaciones, cómo se va a leer el archivo, el botón para analizar,
-  los formatos aceptados, el ejemplo, el modelo con sus métricas y el aviso académico. A la
-  derecha, los paneles de resultados en orden de lectura: resumen, trazado, error por latido,
-  latido seleccionado junto a las anotaciones, tabla y cómo funciona. En pantallas de menos de
-  960 px, el panel lateral pasa arriba.
-- Antes de analizar, el área de lectura muestra un panel con tres pasos para empezar.
-- La cinta del modelo de demostración va arriba de todo, a lo ancho, para verse en cualquier
-  pantalla.
-- La idea visual central es el papel de electrocardiograma: cuadrícula rosada de 1 mm y 5 mm con
-  trazo en tinta azul. Aparece en el panel inicial, con un trazo que se dibuja una vez al cargar e
-  incluye un latido ventricular marcado, y en el panel del trazado, donde la cuadrícula está
-  alineada con el tiempo y el voltaje reales (0,04 s × 0,1 mV y 0,2 s × 0,5 mV). Todo lo demás es
-  sobrio.
-- Rojo reservado para lo atípico y siempre acompañado de un triángulo, para que no dependa solo del
-  color. Azul para la reconstrucción y las acciones.
-- Tipografía Atkinson Hyperlegible Next, del Braille Institute, pensada para leerse sin
-  ambigüedad: su cero lleva barra para no confundirlo con la O.
-- Modo claro y oscuro, celular (en pantallas angostas la tira muestra 5 s), teclado (enlace para
-  saltar a la carga, foco visible) y movimiento reducido (sin la animación del trazo).
-- Impresión: oculta el panel lateral, el panel inicial y los controles, conserva la cuadrícula y
-  agrega el aviso de que no es un dispositivo médico.
+- Herramienta clínica sobria, en tema oscuro. Los colores son tokens en `:root` (`styles.css`) y
+  cada uno tiene un solo significado:
+  - **Rojo** (`--atypical`): solo para lo atípico. Siempre va acompañado de un triángulo y de la
+    palabra "Atípico", para que no dependa solo del color.
+  - **Azul** (`--accent`): solo para lo interactivo.
+  - **Ámbar** (`--warning`): para los avisos.
+  - **Cian** (`--reconstruction`): para la curva del modelo.
+  - **Azul grisáceo** (`--normal`): para los latidos dentro del umbral.
+- Tipografía Inter (400, 500 y 600) con cifras tabulares. Escala de espaciado de 4 px, bordes de
+  1 px y sin sombras pesadas.
+- Encabezado fijo con la única pastilla de demostración. Al pasar el cursor o hacer clic, muestra
+  el aviso completo.
+- Barra lateral de 320 px con su propio desplazamiento, en tres secciones:
+  - **Registro:** zonas de arrastre para la señal y las anotaciones. Cada archivo cargado aparece
+    como una ficha con su detalle y una ✕ para quitarlo.
+  - **Lectura del archivo:** opciones de lectura, botón para analizar, formatos aceptados,
+    ejemplo y nota de privacidad.
+  - **Modelo:** métricas y el único aviso de uso académico.
+- Área principal, de hasta 1400 px, en este orden:
+  1. Resultados y KPIs, con una barra de proporción de atípicos.
+  2. Visor del trazado.
+  3. Error por latido.
+  4. Detalle del latido junto a la comparación con las anotaciones.
+  5. Tabla.
+  6. Cómo funciona.
+- Visor del trazado:
+  - Cuadrícula de papel de ECG en tonos neutros. La fina (0,04 s × 0,1 mV) se oculta en ventanas
+    de más de 10 s.
+  - Cada atípico lleva una banda roja sobre su ventana, y su tramo de señal se dibuja en rojo.
+  - Debajo hay un minimapa con el registro completo, que se arrastra con el ratón o se mueve con
+    las flechas del teclado.
+- Error por latido: el eje llega al siguiente valor redondo por encima del máximo, así que ningún
+  punto queda recortado. La franja de la vista actual está rotulada.
+- Detalle del latido: el eje se ajusta a las dos curvas con un 10 % de margen, y el tooltip queda
+  fijo arriba a la izquierda, sin tapar las curvas.
+- Tabla:
+  - Columna "Forma" con un mini trazo de cada latido.
+  - Mini barra logarítmica junto al error, con una marca en el umbral.
+  - Buscador por número o tiempo, e interruptor "Mostrar solo los atípicos".
+- Seleccionar un latido en el trazado, el gráfico de error, la tabla o con "Siguiente atípico" lo
+  sincroniza en todas las vistas, con el contador "3 de 14".
+- Por debajo de 1100 px, la barra lateral pasa arriba como un panel plegable (se pliega sola al
+  analizar). Por debajo de 640 px, los KPIs van en dos columnas y la tabla oculta "Forma" y
+  "FC inst.".
+- Impresión en fondo blanco, con cuadrícula rosa tipo papel y atípicos en rojo oscuro. Oculta la
+  barra lateral y los controles, y agrega el aviso de que no es un dispositivo médico.
 
 **Qué ve el médico**
 1. Carga un CSV con la señal (y, opcionalmente, las anotaciones de los latidos). La derivación, la
    frecuencia y las unidades se detectan solas y se pueden corregir antes de analizar.
-2. Resumen, como en la cabecera de un ECG impreso: cuántos latidos atípicos hay (n y %), duración,
-   FC mediana, latidos analizados y de dónde salieron los picos R.
-3. La tira del trazado filtrado sobre papel de ECG, con un marcador sobre cada latido. Al hacer clic
-   en un marcador o en un punto del gráfico de errores, se ve el latido superpuesto con su
-   reconstrucción.
+2. Resumen: cuántos latidos atípicos hay (n y %), duración, FC mediana, latidos analizados y, bajo
+   el título, de dónde salieron los picos R.
+3. El trazado filtrado con los atípicos resaltados y un marcador sobre cada latido. Al hacer clic
+   en un marcador, en un punto del gráfico de errores o en una fila de la tabla, se ve el latido
+   superpuesto con su reconstrucción.
 4. El error de cada latido en el tiempo (veces el umbral).
 5. Tabla de latidos ordenable, con navegación entre atípicos, descarga en CSV e impresión.
 6. Si cargó anotaciones: cuántos latidos de cada símbolo se marcaron (sensibilidad y especificidad
@@ -103,9 +127,10 @@ Dependencia nueva: `onnx==1.17.0` en `requirements.txt` (aprobada), para verific
 - **De punta a punta:** con el ECG de ejemplo, onnxruntime-web en Node dio el mismo error por
   latido que `ecg.score` (diferencia máxima de 1,2e-7) y las mismas 72 decisiones.
 - **En navegador:** Brave sin interfaz, con la CSP de `vercel.json` activa, sin errores de consola
-  y sin desplazamiento horizontal. Se probaron el modo claro, el oscuro, 390 px de ancho e
-  impresión, y las interacciones: detector sin anotaciones, siguiente atípico, duración visible,
-  orden y filtro de la tabla.
+  y sin desplazamiento horizontal. Se probaron 1440, 1000 y 390 px de ancho e impresión. También
+  las interacciones: detector sin anotaciones, siguiente atípico y su contador, duración visible,
+  arrastre del minimapa, tooltip fijo del latido, orden, buscador e interruptor de la tabla, quitar
+  archivos con la ✕ y la pastilla de demostración.
 - **Caso genérico:** una sola columna en mV a 250 Hz, sin anotaciones. Se remuestreó, el detector
   encontró los 72 latidos y salieron los mismos 14 atípicos.
 - `pytest -q`: 53 aprobadas y 1 omitida (GPU). `ruff check .`: sin errores.
