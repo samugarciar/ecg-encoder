@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Latidos atípicos en ECG</title>
+  <meta name="description" content="Herramienta académica que señala latidos atípicos en un ECG con un autoencoder entrenado con latidos normales de MIT-BIH.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 17h7l3-8 5 15 3-7h10' fill='none' stroke='%232a78d6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 17h7l3-8 5 15 3-7h10"/></svg>
+      <div>
+        <h1>Latidos atípicos en ECG</h1>
+        <p class="subtitle">Autoencoder entrenado con latidos normales · MIT-BIH, derivación MLII</p>
+      </div>
+    </div>
+    <div class="model-badge" id="model-badge" aria-live="polite">Cargando modelo…</div>
+  </header>
+
+  <div class="notices">
+    <p class="notice notice-warning" role="note">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Zm0 6v6m0 3v.01"/></svg>
+      <span><strong>Herramienta académica, no es un dispositivo médico.</strong> Señala latidos que
+      el modelo reconstruye mal para que un profesional los revise. No diagnostica arritmias ni
+      reemplaza la lectura del ECG por un especialista.</span>
+    </p>
+    <p class="notice notice-critical" id="demo-banner" role="alert" hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v.01"/></svg>
+      <span><strong>Modelo de demostración.</strong> El modelo cargado se entrenó con latidos
+      sintéticos, no con pacientes reales. Sirve para probar la interfaz; sus resultados no tienen
+      ningún valor clínico.</span>
+    </p>
+  </div>
+
+  <main>
+    <section class="card" id="upload" aria-labelledby="upload-title">
+      <h2 id="upload-title"><span class="step">1</span> Cargar el registro</h2>
+
+      <div class="upload-grid">
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="signal-file" accept=".csv,.txt,.tsv,text/csv,text/plain">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <span class="dz-title">Arrastre aquí el archivo de la señal o haga clic para elegirlo</span>
+          <span class="dz-hint">CSV o texto con una columna por derivación (por ejemplo, el formato de MIT-BIH)</span>
+          <span class="dz-file" id="signal-name"></span>
+        </label>
+
+        <div class="side">
+          <label class="field file-field">
+            <span>Anotaciones de latidos <em>(opcional)</em></span>
+            <input type="file" id="ann-file" accept=".txt,.csv,text/plain">
+            <small id="ann-name">Cárguelas después de la señal. Si las carga, se usan sus picos R en vez del detector automático.</small>
+          </label>
+          <button type="button" class="btn btn-secondary" id="sample-btn">Probar con el ECG sintético de ejemplo</button>
+          <p class="privacy">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            El archivo se procesa en este navegador. No se envía a ningún servidor.
+          </p>
+        </div>
+      </div>
+
+      <form class="options" id="options" hidden>
+        <label class="field">
+          <span>Derivación</span>
+          <select id="opt-column"></select>
+        </label>
+        <label class="field">
+          <span>Frecuencia de muestreo (Hz)</span>
+          <input type="number" id="opt-fs" min="50" max="5000" step="1" value="360" required>
+        </label>
+        <label class="field">
+          <span>Unidades de la señal</span>
+          <select id="opt-units">
+            <option value="adc">Conversor A/D de MIT-BIH ((x − 1024) / 200)</option>
+            <option value="mv">Milivoltios (mV)</option>
+            <option value="uv">Microvoltios (µV)</option>
+          </select>
+        </label>
+        <label class="field checkbox" id="opt-ann-wrap" hidden>
+          <input type="checkbox" id="opt-use-ann" checked>
+          <span>Usar los picos R de las anotaciones</span>
+        </label>
+        <div class="options-actions">
+          <p class="file-summary" id="file-summary"></p>
+          <button type="submit" class="btn btn-primary" id="analyze-btn">Analizar</button>
+        </div>
+      </form>
+
+      <details class="formats">
+        <summary>¿Qué archivos acepta?</summary>
+        <ul>
+          <li><strong>Señal:</strong> CSV separado por comas, punto y coma o tabulaciones, con o sin
+          encabezado. Si hay una columna llamada <code>MLII</code> se usa esa; si no, elija la
+          derivación. El modelo se entrenó con la derivación MLII (similar a DII) a 360 Hz; otras
+          derivaciones o frecuencias se procesan, pero los resultados son menos confiables.</li>
+          <li><strong>Unidades:</strong> se detectan solas (enteros alrededor de 1024 = conversor de
+          MIT-BIH); revise el valor antes de analizar.</li>
+          <li><strong>Anotaciones (opcional):</strong> el archivo <code>annotations.txt</code> de
+          MIT-BIH, o un CSV con dos columnas: muestra del pico R y símbolo del latido.</li>
+        </ul>
+      </details>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="results" aria-labelledby="results-title" hidden>
+      <div class="results-head">
+        <h2 id="results-title"><span class="step">2</span> Resultados <span class="file-chip" id="result-file"></span></h2>
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="download-btn">Descargar CSV</button>
+          <button type="button" class="btn btn-secondary" id="print-btn">Imprimir</button>
+        </div>
+      </div>
+      <ul class="warnings" id="warnings"></ul>
+
+      <div class="tiles" id="tiles"></div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h3>Error de reconstrucción por latido</h3>
+            <p class="hint">Veces el umbral, en escala logarítmica. Por encima de la línea, el latido se marca como atípico. Haga clic en un latido para verlo.</p>
+          </div>
+          <ul class="legend" aria-label="Leyenda">
+            <li><span class="key key-dot"></span>Dentro del umbral</li>
+            <li><span class="key key-tri"></span>Atípico</li>
+            <li><span class="key key-line"></span>Umbral</li>
+          </ul>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="error-chart" class="chart chart-error" role="img" aria-label="Error relativo de cada latido en el tiempo"></canvas>
+          <div class="tooltip" id="error-tip" hidden></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h3>Trazado <span id="strip-lead">MLII</span> filtrado (0,5–40 Hz)</h3>
+            <p class="hint">Cuadrícula de 0,2 s × 0,5 mV. Los marcadores arriba del trazado indican cada latido analizado.</p>
+          </div>
+          <div class="strip-controls">
+            <button type="button" class="btn btn-icon" id="strip-prev" aria-label="Retroceder">‹</button>
+            <select id="strip-span" aria-label="Duración visible">
+              <option value="5">5 s</option>
+              <option value="10" selected>10 s</option>
+              <option value="20">20 s</option>
+              <option value="60">60 s</option>
+            </select>
+            <button type="button" class="btn btn-icon" id="strip-next" aria-label="Avanzar">›</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="strip-chart" class="chart chart-strip" role="img" aria-label="Trazado del ECG filtrado"></canvas>
+          <div class="tooltip" id="strip-tip" hidden></div>
+        </div>
+        <input type="range" id="strip-pos" class="strip-pos" min="0" max="1000" value="0" aria-label="Posición en el registro">
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Latido seleccionado</h3>
+              <p class="hint">Latido normalizado (z-score) y lo que el modelo logró reconstruir. El área sombreada es la diferencia.</p>
+            </div>
+            <div class="beat-nav">
+              <button type="button" class="btn btn-secondary btn-sm" id="prev-atyp">‹ Atípico anterior</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="next-atyp">Siguiente atípico ›</button>
+            </div>
+          </div>
+          <ul class="legend" aria-label="Leyenda">
+            <li><span class="key key-trace"></span>Latido</li>
+            <li><span class="key key-recon"></span>Reconstrucción</li>
+            <li><span class="key key-area"></span>Diferencia</li>
+          </ul>
+          <div class="chart-wrap">
+            <canvas id="beat-chart" class="chart chart-beat" role="img" aria-label="Latido seleccionado y su reconstrucción"></canvas>
+            <div class="tooltip" id="beat-tip" hidden></div>
+          </div>
+          <dl class="beat-info" id="beat-info"></dl>
+        </div>
+
+        <div class="card" id="agreement-card">
+          <h3>Comparación con las anotaciones</h3>
+          <div id="agreement"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Latidos</h3>
+          <label class="checkbox"><input type="checkbox" id="only-atypical" checked> Mostrar solo atípicos</label>
+        </div>
+        <div class="table-wrap">
+          <table class="beats-table" id="beats-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card about" id="about" aria-labelledby="about-title">
+      <h2 id="about-title">Cómo funciona y qué tener en cuenta</h2>
+      <div class="about-grid">
+        <div>
+          <h3>El método</h3>
+          <ol>
+            <li>La señal se convierte a mV y se filtra entre 0,5 y 40 Hz (Butterworth de orden 3, fase cero) para quitar la deriva de la línea base y el ruido de red.</li>
+            <li>Se ubica cada pico R: con las anotaciones, si se cargaron, o con un detector automático.</li>
+            <li>De cada latido se toma una ventana de 711 ms (250 ms antes del R y 461 ms después) y se normaliza.</li>
+            <li>Un autoencoder convolucional, entrenado <em>solo con latidos normales</em>, intenta reconstruir el latido. Lo que no se parece a un latido normal se reconstruye mal.</li>
+            <li>Si el error supera el umbral (el percentil 95 del error en latidos normales de validación), el latido se marca como <strong>atípico</strong>.</li>
+          </ol>
+        </div>
+        <div>
+          <h3>Limitaciones</h3>
+          <ul>
+            <li>Por construcción, alrededor de <strong>1 de cada 20 latidos normales</strong> queda por encima del umbral (falsos positivos).</li>
+            <li>Muchos latidos anómalos se reconstruyen bien y <strong>no se marcan</strong>. Ver la sensibilidad abajo: un resultado sin atípicos no descarta una arritmia.</li>
+            <li>“Atípico” no es un diagnóstico: el modelo no distingue el tipo de arritmia, ni evalúa ritmo, intervalos o segmento ST.</li>
+            <li>El modelo del proyecto aprende con los latidos normales de 18 registros de MIT-BIH y fija el umbral con otros 4, en derivación MLII a 360 Hz. Otras derivaciones, frecuencias, equipos o poblaciones no están validados.</li>
+            <li>El detector automático de picos R no está validado; si hay anotaciones, úselas.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Desempeño del modelo cargado</h3>
+          <div id="model-metrics"><p class="muted">Cargando…</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Proyecto académico · Redes Neuronales Artificiales · Universidad Nacional de Colombia, Sede Medellín.
+    Datos de entrenamiento: MIT-BIH Arrhythmia Database (PhysioNet).</p>
+    <p id="footer-model"></p>
+  </footer>
+</body>
+</html>
