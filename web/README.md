@@ -17,6 +17,18 @@ python scripts/serve_web.py          # http://localhost:8000
 
 ---
 
+## Decisiones iniciales
+
+Antes de construir la página se respondieron estas preguntas:
+
+| Pregunta | Respuesta | Qué se hizo |
+| :--- | :--- | :--- |
+| ¿De dónde salen los pesos del modelo? | No estaba claro: el repositorio no tiene ningún `model.pt` (el del run de Andrés está solo en su computador). | Se entrenó un **modelo de demostración** con latidos sintéticos para que la página funcione, marcado como tal en la interfaz. El modelo real se conecta con un comando (ver [Conectar el modelo real](#conectar-el-modelo-real)). |
+| ¿Qué archivo sube el médico y cómo se ubican los latidos? | "Tomar la mejor decisión". | Se acepta un CSV flexible (formato MIT-BIH o una columna en mV/µV, cualquier frecuencia). Si se cargan anotaciones se usan sus picos R; si no, un **detector automático**, con una advertencia de que no está validado. |
+| ¿Qué arquitectura usar en Vercel? | Sitio estático con el modelo en el navegador. | El modelo se exporta a **ONNX** y corre en el navegador con onnxruntime-web. PyTorch no cabe en Vercel, y así el ECG del paciente nunca sale de su computador (D-023). |
+| ¿Instalar Python 3.11 para verificar? | Sí. | Se instaló Python 3.11, se creó el `.venv` y se corrieron `pytest` y `ruff`. |
+| ¿Instalar Node.js para comprobar el JavaScript? | Sí. | Se instaló Node.js (solo para pruebas, no es dependencia del despliegue) y se agregaron pruebas que comparan el JavaScript con scipy y numpy. |
+
 ## Qué se hizo
 
 ### La interfaz (`web/`)
