@@ -1,0 +1,41 @@
+{
+  "run_id": "20261106-1042_demo_demo_web",
+  "is_demo": true,
+  "exported_at": "2026-11-06T15:42:59+00:00",
+  "git_commit": "a3c0e2cbf658fcfb11006406a9e725107621944c",
+  "data_version": "mock",
+  "input_length": 256,
+  "normalization": "zscore",
+  "threshold": {
+    "value": 0.016877450048923492,
+    "percentile": 95.0,
+    "fitted_on": "val"
+  },
+  "validation": {
+    "n": {
+      "normal": 207,
+      "anomalous": 60
+    },
+    "global": {
+      "auc_roc": 1.0,
+      "auc_pr": 1.0,
+      "sensitivity": 1.0,
+      "specificity": 0.9468599033816425,
+      "precision": 0.8450704225352113,
+      "f1": 0.916030534351145,
+      "accuracy": 0.9588014981273408
+    },
+    "per_aami_sensitivity": {
+      "S": 1.0,
+      "V": 1.0,
+      "F": 1.0,
+      "Q": null
+    }
+  },
+  "onnx": {
+    "file": "model.onnx",
+    "input": "beats",
+    "output": "reconstruction",
+    "opset": 17
+  }
+}

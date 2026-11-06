@@ -1,0 +1,27 @@
+# Modelo de DEMOSTRACIÓN para la interfaz web (web/). Se entrena con los latidos sintéticos de
+# scripts/make_mock_beats.py, no con MIT-BIH: sirve solo para probar la interfaz de punta a punta
+# mientras no esté disponible el model.pt de un run real. Sus resultados no tienen valor clínico.
+# Lo usa `python -m scripts.export_web_model --demo`.
+name: demo_web
+seed: 42
+device: cpu
+
+data:
+  exclude_noisy: true
+  normalization: zscore  # igual que el baseline (D-008): la interfaz replica este paso
+
+model:  # misma arquitectura que baseline.yaml (D-022), para que el ONNX tenga la forma real
+  input_length: 256
+  channels: [16, 32, 64, 128]
+  kernel_size: 7
+  latent_dim: 32
+
+training:
+  batch_size: 128
+  learning_rate: 0.001
+  max_epochs: 40
+  patience: 8
+  min_delta: 0.0
+
+mock:  # tamaño del C1 sintético con que se entrena el demo
+  n_beats: 3000
